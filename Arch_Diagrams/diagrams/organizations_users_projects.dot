@@ -1,0 +1,39 @@
+// ER diagram for organizations, users, and projects
+// Generated: 2025-11-24
+
+digraph ER {
+  graph [
+    rankdir = "LR"
+    splines = "ortho"
+    nodesep = 0.6
+    ranksep = 0.8
+    fontsize = 12
+  ];
+
+  node [shape=record, fontname="Helvetica"];
+
+  Organizations [label="{Organizations | + id : SERIAL\l+ name : VARCHAR(200) (UNIQUE, NOT NULL)\l+ slug : VARCHAR(200) (UNIQUE, NOT NULL)\l+ description : TEXT\l+ created_at : TIMESTAMPTZ DEFAULT now()\l+ updated_at : TIMESTAMPTZ DEFAULT now()\l}"];
+
+  Users [label="{Users | + id : SERIAL\l+ org_id : INTEGER (FK -> organizations.id)\l+ email : VARCHAR(255) (UNIQUE, NOT NULL)\l+ full_name : VARCHAR(255)\l+ role : VARCHAR(50) DEFAULT 'member'\l+ is_active : BOOLEAN DEFAULT TRUE\l+ created_at : TIMESTAMPTZ DEFAULT now()\l+ updated_at : TIMESTAMPTZ DEFAULT now()\l}"];
+
+  Projects [label="{Projects | + id : SERIAL\l+ owner_id : INTEGER (FK -> users.id, NOT NULL)\l+ name : VARCHAR(255) (NOT NULL)\l+ description : TEXT\l+ status : VARCHAR(50) DEFAULT 'active'\l+ created_at : TIMESTAMPTZ DEFAULT now()\l+ updated_at : TIMESTAMPTZ DEFAULT now()\l+ UNIQUE(owner_id, name)\l}"];
+
+  // Relationships
+  // organizations.id 1 --- * users.org_id  (ON DELETE SET NULL)
+  Organizations:e -> Users:w [arrowhead=vee, label="1..*", fontsize=10];
+
+  // users.id 1 --- * projects.owner_id  (ON DELETE CASCADE)
+  Users:e -> Projects:w [arrowhead=vee, label="1..*", fontsize=10];
+
+  // Add small notes for referential actions
+  OrgNote [shape=note, label="org_id FK ON DELETE SET NULL"];
+  UserNote [shape=note, label="owner_id FK ON DELETE CASCADE"];
+
+  Users -> OrgNote [style=dashed, arrowhead=none];
+  Projects -> UserNote [style=dashed, arrowhead=none];
+
+  // Styling
+  Organizations [style=filled, fillcolor="#F2F3F4"];
+  Users [style=filled, fillcolor="#E8F8F5"];
+  Projects [style=filled, fillcolor="#FEF5E7"];
+}

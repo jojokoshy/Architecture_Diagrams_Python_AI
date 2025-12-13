@@ -1,0 +1,20 @@
+flowchart TD
+A[Receive HTTP POST via Hub API Gateway] --> B[Respond HTTP Status 200 immediately]
+B --> C[Decrypt payload using Azure Key Vault keys]
+C --> D[Parse payload in database]
+D --> E[Create SuperGraph using GraphQL query with RequestId, JourneyId.]
+G[Query SuperGraph with All Inactive EntityIDs to find Related EntityIDs for each entity]
+E --> F[Any returned Entities Marked as InActive in Journey ?]
+F -- Yes --> G
+F -- No --> L
+G --> H{Check Related Entities: Any related entities found?}
+H -- No --> Inactive[Mark all Entities with Empty Related Entities Array as InActive]
+H -- Yes --> Active[Mark all Entities with Related Entities Array Count >= 1 as Active]
+Inactive --> L[Get OrgUnit from Azure SQL DB - Branch and Department mapping]
+Active --> L[Get OrgUnit from Azure SQL DB - Branch and Department mapping]
+L --> M[Convert SuperGraph JSON data to XML with Liquid Templates]
+M --> N[Call NetReveal Screening API for entity i - loop over Entities + RelatedEntities]
+N --> Q{More entities to process?}
+Q -- Yes --> N
+Q -- No --> O[Store after all NetReveal calls succeed]
+O --> P[End process - No response sent back to FenX]

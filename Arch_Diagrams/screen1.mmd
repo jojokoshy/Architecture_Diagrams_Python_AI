@@ -1,0 +1,43 @@
+erDiagram
+    ScreeningEntity {
+        int ID PK
+        int BatchId
+        int JourneyId
+        int LegalEntityId
+        int ScreeningEntityId
+        int RelationshipId
+        string EntityType
+        int ProfileId
+        string ScreeningStage
+        string DDIQProfileStatus
+        string DDIQProfileVersion
+        string ScreeningVersion
+        date ScreeningValidityDate
+        int ScreeningResponseEntityPayloadId
+        int DDIQSubmissionPayloadId
+        date DDIQSubmissionPayloadDate
+        date CreatedOn
+        string CreatedBy
+    }
+
+    ScreeningHit {
+        int ID PK
+        int BatchId
+        int JourneyId
+        int LegalEntityId
+        int ScreeningEntityId FK
+        int ProfileId
+        int MatchId
+        int DDIQHitId
+        string HitStage
+        string ResolutionStatus
+        string ResolutionReason
+        string ResolutionComments
+        int ResolveHitRequestPayloadId
+        int DDIQAdjudicationPayloadId
+        int LastAdjudicationId
+        date CreatedOn
+        string CreatedBy
+    }
+
+    ScreeningEntity ||--o{ ScreeningHit : contains

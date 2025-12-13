@@ -1,0 +1,52 @@
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant Liquid as "Liquid Templates"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  Client->>iHubIn: POST payload
+  iHubIn->>CLMAdaptor: Forward request
+  CLMAdaptor-->>iHubIn: 200 OK
+  iHubIn-->>Client: 200 OK
+
+  CLMAdaptor->>KeyVault: Decrypt payload
+  KeyVault-->>CLMAdaptor: plaintext
+  CLMAdaptor->>DB: Persist payload
+
+  CLMAdaptor->>iHubIn: Create SuperGraph (RequestId, JourneyId)
+  iHubIn->>FenX: Create SuperGraph / association/root (EntityId, JourneyId)
+  FenX-->>iHubIn: Entities + action types
+  iHubIn-->>CLMAdaptor: Entities + action types
+
+  alt any Entities marked InActive
+    CLMAdaptor->>iHubIn: Query related EntityIDs
+    iHubIn->>FenX: Query related entities
+    FenX-->>iHubIn: Related EntityIDs (or empty)
+    iHubIn-->>CLMAdaptor: Related EntityIDs (or empty)
+    alt related entities found
+      CLMAdaptor->>iHubIn: Mark entities Active
+      iHubIn->>FenX: Update status -> Active
+    else none found
+      CLMAdaptor->>iHubIn: Mark entities InActive
+      iHubIn->>FenX: Update status -> InActive
+    end
+  end
+
+  CLMAdaptor->>DB: Get OrgUnit (Branch/Dept)
+  CLMAdaptor->>Liquid: Convert JSON -> XML
+
+  loop For each entity
+    CLMAdaptor->>iHubOut: Call NetReveal (entity i)
+    iHubOut->>NetReveal: Call NetReveal (entity i)
+    NetReveal-->>iHubOut: Screening result
+    iHubOut-->>CLMAdaptor: Screening result
+  end
+
+  CLMAdaptor->>DB: Store screening results
+  Note right of CLMAdaptor: Asynchronous processing — no immediate response returned to FenX

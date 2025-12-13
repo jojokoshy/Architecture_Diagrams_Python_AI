@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="app.diagrams.net" modified="2025-11-24T00:00:00.000Z" agent="draw.io">
+  <diagram id="diagram-1" name="ER2">
+    <mxGraphModel dx="1200" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="900">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- ScreeningEntity vertex -->
+        <mxCell id="entity_screeningentity" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;ScreeningEntity&lt;/b&gt;&#xa;- ID (PK)&#xa;- BatchId&#xa;- JourneyId&#xa;- LegalEntityId&#xa;- ScreeningEntityId&#xa;- RelationshipId&#xa;- EntityType&#xa;- ProfileId&#xa;- ScreeningStage&#xa;- DDIQProfileStatus&#xa;- DDIQProfileVersion&#xa;- ScreeningVersion&#xa;- ScreeningValidityDate&#xa;- ScreeningResponseEntityPayloadId&#xa;- DDIQSubmissionPayloadId&#xa;- DDIQSubmissionPayloadDate&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="340" height="320" as="geometry"/>
+        </mxCell>
+
+        <!-- ScreeningHit vertex -->
+        <mxCell id="entity_screeninghit" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;ScreeningHit&lt;/b&gt;&#xa;- ID (PK)&#xa;- BatchId&#xa;- JourneyId&#xa;- LegalEntityId&#xa;- ScreeningEntityId (FK)&#xa;- ProfileId&#xa;- MatchId&#xa;- DDIQHitId&#xa;- HitStage&#xa;- ResolutionStatus&#xa;- ResolutionReason&#xa;- ResolutionComments&#xa;- ResolveHitRequestPayloadId&#xa;- DDIQAdjudicationPayloadId&#xa;- LastAdjudicationId&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="40" width="340" height="300" as="geometry"/>
+        </mxCell>
+
+        <!-- ScreeningData vertex -->
+        <mxCell id="entity_screeningdata" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;ScreeningData&lt;/b&gt;&#xa;- ID (PK)&#xa;- BatchId&#xa;- JourneyId&#xa;- LegalEntityId&#xa;- ScreeningEntityId (FK)&#xa;- ProfileId&#xa;- RawisonData&#xa;- HashedValue&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="360" width="340" height="220" as="geometry"/>
+        </mxCell>
+
+        <!-- ScreeningTransactionLog vertex -->
+        <mxCell id="entity_transactionlog" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;ScreeningTransactionLog&lt;/b&gt;&#xa;- ID (PK)&#xa;- BatchId&#xa;- JourneyId&#xa;- ScreeningEntityId (FK)&#xa;- LegalEntityId&#xa;- DDIProfileId&#xa;- Transaction&#xa;- TransactionDate&#xa;- Status&#xa;- Message&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="380" width="340" height="240" as="geometry"/>
+        </mxCell>
+
+        <!-- ScreeningBatch vertex -->
+        <mxCell id="entity_batch" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;ScreeningBatch&lt;/b&gt;&#xa;- ID (PK)&#xa;- BatchId&#xa;- ProcessId&#xa;- JourneyId&#xa;- ScreenRequestPayloadId&#xa;- ScreenResponsePayloadId&#xa;- ResolveRequestPayloadId&#xa;- EntityDraftResponsePayloadId&#xa;- RelatedEntitiesResponsePayloadId&#xa;- RelatedEntityDraftsResponsePayloadId&#xa;- BatchStage&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="820" y="40" width="360" height="320" as="geometry"/>
+        </mxCell>
+
+        <!-- ScreeningPayload vertex -->
+        <mxCell id="entity_payload" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;ScreeningPayload&lt;/b&gt;&#xa;- ID (PK)&#xa;- Payload&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="820" y="380" width="360" height="140" as="geometry"/>
+        </mxCell>
+
+        <!-- AuditLog vertex -->
+        <mxCell id="entity_auditlog" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;AuditLog&lt;/b&gt;&#xa;- ID (PK)&#xa;- APIEndpoint&#xa;- HttpMethod&#xa;- APIName&#xa;- Direction&#xa;- RequestDate&#xa;- RequestPayload&#xa;- ResponseDate&#xa;- ResponsePayload&#xa;- StatusCode&#xa;- ErrorResponse&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="40" y="660" width="340" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- DDIQErrorCodes vertex -->
+        <mxCell id="entity_ddiqerrors" value="&lt;div style=&quot;white-space:pre&quot;&gt;&lt;b&gt;DDIQErrorCodes&lt;/b&gt;&#xa;- ID (PK)&#xa;- ErrorCode&#xa;- StatusCode&#xa;- Reason&#xa;- Message&#xa;- Description&#xa;- CreatedOn&#xa;- CreatedBy&#xa;- ModifiedOn&#xa;- ModifiedBy&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#2D3436;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="660" width="340" height="200" as="geometry"/>
+        </mxCell>
+
+        <!-- Edges: one-to-many / FK relationships -->
+        <mxCell id="edge_entity_hit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_screeningentity" target="entity_screeninghit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_entity_data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_screeningentity" target="entity_screeningdata">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_entity_txlog" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_screeningentity" target="entity_transactionlog">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_batch_entity" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_batch" target="entity_screeningentity">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_batch_hit" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_batch" target="entity_screeninghit">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_batch_data" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_batch" target="entity_screeningdata">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_batch_txlog" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_batch" target="entity_transactionlog">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_batch_payload" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_batch" target="entity_payload">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <mxCell id="edge_audit_ddiq" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;" edge="1" parent="1" source="entity_auditlog" target="entity_ddiqerrors">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

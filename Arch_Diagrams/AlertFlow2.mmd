@@ -1,0 +1,22 @@
+%%{init: {"theme":"default","themeVariables": {"background":"#ffffff","fontSize":"14"}}}%%
+flowchart TB
+classDef step fill:#ffffff,stroke:#2b6cb0,color:#0f172a,stroke-width:1px;
+classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
+classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
+classDef footer fill:#ffffff,stroke:none,color:#0f172a;
+
+%% Pending Alerts Flow
+A1[Timer Trigger]:::step --> A2[Query PendingJourneyAlerts DB - Open Alerts Only]:::step
+A2 --> LoopStart((Loop: Pending Alerts)):::loop
+
+subgraph PendingLoop [Loop through Pending Alerts]
+	direction TB
+	LoopStart --> E2[Query FenX for Journey Info]:::step
+	E2 --> M{FenX Journey Open?}:::decision
+	M -->|No| N1[Create new screening journey]:::step
+	M -->|Yes| LoopStart
+
+	N1 --> N2[Update Alert and continue]:::step
+	N2 --> N3[Mark Pending Alert Closed in DB]:::step
+	N3 --> LoopStart
+end

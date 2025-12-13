@@ -1,0 +1,120 @@
+erDiagram
+    %% FK label convention:
+    %%  - Relationship labels use the format "SourceField -> TargetField" to show FK -> PK mappings.
+    %%  - Example: ScreeningBatch }o--|| RequestResponsePayload : "ScreenRequestPayloadId -> ID"
+    %%    means ScreeningBatch.ScreenRequestPayloadId references RequestResponsePayload.ID (FK -> PK).
+    %%  - Multiplicity notation follows Mermaid ER style: || = one, }o = many/optional.
+    ScreeningBatch {
+        int ID PK
+        int BatchId
+        int ProcessId
+        int JourneyId
+        string BatchStage
+        date CreatedOn
+        string CreatedBy
+        date ModifiedOn
+        string ModifiedBy
+    }
+
+    RequestResponsePayload {
+        int ID PK
+        int BatchId FK ScreeningBatch BatchId 
+        int JourneyId FK ScreeningBatch JourneyId
+        int ProcessId FK ScreeningBatch ProcessId
+        string Payload
+        date CreatedOn
+        string CreatedBy
+        date ModifiedOn
+        string ModifiedBy
+        string PayloadType
+        %% Notes:
+        %% - JourneyId and ProcessId are intentionally duplicated in RequestResponsePayload for query convenience
+        %%   (they should match the values in the parent ScreeningBatch row).
+        %% - To guarantee exactly one Request and one Response per batch add a DB unique constraint:
+        %%   UNIQUE(BatchId, PayloadType).
+        %% - PayloadType values are expected to be 'JourneySuperGraphRequest' or 'JourneySuperGraphResponse' or EntitySuperGraphRequest or 'EntitySuperGraphResponse'
+
+    }
+    ScreeningEntity {
+        int ID PK
+        int BatchId
+        int JourneyId
+        int LegalEntityId
+        int ScreeningEntityId
+        int RelationshipId
+        string EntityType
+        string ScreeningStage
+        date CreatedOn
+        string CreatedBy
+        string ModifiedBy
+        date ModifiedOn
+    }
+
+    ScreeningHit {
+        int ID PK
+        int BatchId
+        int JourneyId
+        int AlertId
+        bool HitNoHit
+        date CreatedOn
+        string CreatedBy
+        string ModifiedBy
+        date ModifiedOn
+    }
+
+    ScreenHitDetails {
+        int ID PK
+        int BatchId FK ScreeningBatch BatchId
+        int JourneyId FK ScreeningBatch JourneyId
+        int ScreeningHitId FK ScreeningHit ID
+        int ScreeningEntityId FK ScreeningEntity ID
+        string EntityType
+        string EntityName
+        string MatchType
+        string MatchValue
+        string HitDetailsJson
+        date CreatedOn
+        string CreatedBy
+        date ModifiedOn
+        string ModifiedBy
+    }
+    
+
+    AuditLog {
+        int ID PK
+        string APIEndpoint
+        string HttpMethod
+        string APIName
+        string Direction
+        date RequestDate
+        string RequestPayload
+        date ResponseDate
+        string ResponsePayload
+        int StatusCode
+        string ErrorResponse
+        date CreatedOn
+        string CreatedBy
+        date ModifiedOn
+        string ModifiedBy
+    }
+
+    ErrorCodes {
+        int ID PK
+        string ErrorCode
+        int StatusCode
+        string Reason
+        string Message
+        string Description
+        date CreatedOn
+        string CreatedBy
+        date ModifiedOn
+        string ModifiedBy
+    }
+
+    
+    ScreeningEntity ||--o{ ScreeningHit : contains
+    ScreeningBatch ||--o{ ScreeningEntity : batches
+    ScreeningBatch ||--o{ ScreeningHit : includes
+    ScreeningHit ||--|| ScreenHitDetails : has
+    ScreeningBatch ||--o{ RequestResponsePayload : "BatchId -> BatchId (PayloadType: Request/Response)"
+    AuditLog ||--o{ ErrorCodes : references

@@ -1,0 +1,32 @@
+// Render-friendly ER diagram for organizations, users, and projects
+// This file is a simplified version of the record-based DOT to avoid
+// GraphViz "bad label format" errors on some Windows GraphViz builds.
+
+digraph ER {
+  graph [
+    rankdir = "LR"
+    splines = "ortho"
+    nodesep = 0.6
+    ranksep = 0.8
+    fontsize = 12
+  ];
+
+  node [shape=box, fontname="Helvetica", style=filled, fontsize=10];
+
+  Organizations [label="Organizations\n\nid: UUID\nname: VARCHAR(200) (UNIQUE, NOT NULL)\nslug: VARCHAR(200) (UNIQUE, NOT NULL)\ndescription: TEXT\ncreated_at: TIMESTAMPTZ DEFAULT now()\nupdated_at: TIMESTAMPTZ DEFAULT now()", fillcolor="#F2F3F4"];
+
+  Users [label="Users\n\nid: UUID\norg_id: UUID (FK -> organizations.id)\nemail: VARCHAR(255) (UNIQUE, NOT NULL)\nfull_name: VARCHAR(255)\nrole: VARCHAR(50) DEFAULT 'member'\nis_active: BOOLEAN DEFAULT TRUE\ncreated_at: TIMESTAMPTZ DEFAULT now()\nupdated_at: TIMESTAMPTZ DEFAULT now()", fillcolor="#E8F8F5"];
+
+  Projects [label="Projects\n\nid: UUID\nowner_id: UUID (FK -> users.id, NOT NULL)\nname: VARCHAR(255) (NOT NULL)\ndescription: TEXT\nstatus: VARCHAR(50) DEFAULT 'active'\ncreated_at: TIMESTAMPTZ DEFAULT now()\nupdated_at: TIMESTAMPTZ DEFAULT now()\nUNIQUE(owner_id, name)", fillcolor="#FEF5E7"];
+
+  // Relationships
+  Organizations -> Users [arrowhead=vee, label="1..*", fontsize=10];
+  Users -> Projects [arrowhead=vee, label="1..*", fontsize=10];
+
+  // Notes for referential actions
+  OrgNote [shape=note, label="org_id FK ON DELETE SET NULL", fontsize=9];
+  UserNote [shape=note, label="owner_id FK ON DELETE CASCADE", fontsize=9];
+
+  Users -> OrgNote [style=dashed, arrowhead=none];
+  Projects -> UserNote [style=dashed, arrowhead=none];
+}

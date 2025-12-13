@@ -1,0 +1,34 @@
+flowchart TD
+
+    %% Timer trigger and data fetch
+    C --> D[Timer trigger every 5 min]
+    D --> E[Get Start Date/Time from JourneyAlert table]
+    E --> F[Call NetReveal Alert API with Start Date/Time]
+    F --> G[Get Alert Data as XML array]
+
+    %% Loop through alerts
+    G --> H{{Loop Alerts Array}}
+    subgraph L[Per-alert processing]
+        direction TB
+        H --> I{{Alert Status ?}}
+        I -->|Confirmed/Approved| J[Query Journey Status from FenX Journey API]
+        I -->|Reopened| H
+        J --> K{Is Journey Open?}
+
+        %% Journey alert path
+        K -->|Yes| M{Journey Exists?}
+        M -->|Yes| N[Initiate new screening stage]
+        M -->|No| O[Save Alert to PendingJourneyAlerts]
+
+        %% Non-journey alert path
+        K -->|No| P[AI Screening Stage 1]
+        P --> Q[Update Journey via Response API]
+
+        %% Merge per-alert outcomes
+        N --> R[Update JourneyAlert table in Database]
+        O --> R
+        Q --> R
+    end
+
+    %% End of loop (implicit continuation)
+    R --> S[End]

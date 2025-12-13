@@ -1,0 +1,52 @@
+<?xml version='1.0' encoding='utf-8'?>
+<mxGraphModel grid="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+    <mxCell id="node1" value="&lt;font style='font-size: 10.0px;' face='Helvetica,sans-Serif' color='#000000'&gt;Organizations&lt;br/&gt;id: SERIAL&lt;br/&gt;name: VARCHAR(200) (UNIQUE, NOT NULL)&lt;br/&gt;slug: VARCHAR(200) (UNIQUE, NOT NULL)&lt;br/&gt;description: TEXT&lt;br/&gt;created_at: TIMESTAMPTZ DEFAULT now()&lt;br/&gt;updated_at: TIMESTAMPTZ DEFAULT now()&lt;/font&gt;" style="verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#f2f3f4;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="4.0" y="106.0" width="221.5" height="104.0" as="geometry" />
+    </mxCell>
+    <mxCell id="node2" value="&lt;font style='font-size: 10.0px;' face='Helvetica,sans-Serif' color='#000000'&gt;Users&lt;br/&gt;id: SERIAL&lt;br/&gt;org_id: INTEGER (FK -&gt; organizations.id)&lt;br/&gt;email: VARCHAR(255) (UNIQUE, NOT NULL)&lt;br/&gt;full_name: VARCHAR(255)&lt;br/&gt;role: VARCHAR(50) DEFAULT 'member'&lt;br/&gt;is_active: BOOLEAN DEFAULT TRUE&lt;br/&gt;created_at: TIMESTAMPTZ DEFAULT now()&lt;br/&gt;updated_at: TIMESTAMPTZ DEFAULT now()&lt;/font&gt;" style="verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#e8f8f5;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="298.5" y="94.0" width="220.75" height="128.0" as="geometry" />
+    </mxCell>
+    <mxCell id="node3" value="&lt;font style='font-size: 10.0px;' face='Helvetica,sans-Serif' color='#000000'&gt;Projects&lt;br/&gt;id: SERIAL&lt;br/&gt;owner_id: INTEGER (FK -&gt; users.id, NOT NULL)&lt;br/&gt;name: VARCHAR(255) (NOT NULL)&lt;br/&gt;description: TEXT&lt;br/&gt;status: VARCHAR(50) DEFAULT 'active'&lt;br/&gt;created_at: TIMESTAMPTZ DEFAULT now()&lt;br/&gt;updated_at: TIMESTAMPTZ DEFAULT now()&lt;br/&gt;UNIQUE(owner_id, name)&lt;/font&gt;" style="verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=#fef5e7;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="592.25" y="4.0" width="232.75" height="128.0" as="geometry" />
+    </mxCell>
+    <mxCell id="node4" value="&lt;font style='font-size: 9.0px;' face='Helvetica,sans-Serif' color='#000000'&gt;org_id FK ON DELETE SET NULL&lt;/font&gt;" style="shape=note;backgroundOutline=1;verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=lightgrey;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="631.25" y="175.0" width="154.75" height="36.0" as="geometry" />
+    </mxCell>
+    <mxCell id="node5" value="&lt;font style='font-size: 9.0px;' face='Helvetica,sans-Serif' color='#000000'&gt;owner_id FK ON DELETE CASCADE&lt;/font&gt;" style="shape=note;backgroundOutline=1;verticalAlign=middle;html=1;rounded=0;labelBackgroundColor=none;strokeColor=black;fillColor=lightgrey;strokeWidth=1;dashed=0;" parent="1" vertex="1">
+      <mxGeometry x="884.0" y="50.0" width="167.5" height="36.0" as="geometry" />
+    </mxCell>
+    <mxCell id="edge1" style="html=1;endArrow=block;dashed=0;endFill=1;startArrow=none;startFill=0;fillColor=black;strokeColor=black;strokeWidth=1;rounded=0;exitX=1.0000;exitY=0.5000;entryX=0.0000;entryY=0.5000;" parent="1" edge="1" source="node1" target="node2">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="225.95" y="158.0" as="sourcePoint" />
+        <mxPoint x="286.79" y="158.0" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label_edge1" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];" parent="edge1" value="&lt;font style='font-size: 10.0px;' face='Times New Roman,serif' color='#000000'&gt;1..*&lt;/font&gt;" vertex="1" connectable="0">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="edge2" style="html=1;endArrow=block;dashed=0;endFill=1;startArrow=none;startFill=0;fillColor=black;strokeColor=black;strokeWidth=1;rounded=0;exitX=1.0000;exitY=0.1484;entryX=0.0000;entryY=0.8516;" parent="1" edge="1" source="node2" target="node3">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="519.64" y="113.0" as="sourcePoint" />
+        <mxPoint x="580.56" y="113.0" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="label_edge2" style="edgeLabel;html=1;align=center;verticalAlign=bottom;resizable=0;points=[];" parent="edge2" value="&lt;font style='font-size: 10.0px;' face='Times New Roman,serif' color='#000000'&gt;1..*&lt;/font&gt;" vertex="1" connectable="0">
+      <mxGeometry as="geometry" relative="1" />
+    </mxCell>
+    <mxCell id="edge3" style="html=1;endArrow=none;dashed=1;endFill=0;startArrow=none;startFill=0;fillColor=black;strokeColor=black;strokeWidth=1;rounded=0;exitX=1.0000;exitY=0.7734;entryX=0.0000;entryY=0.5000;" parent="1" edge="1" source="node2" target="node4">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="519.64" y="193.0" as="sourcePoint" />
+        <mxPoint x="631.05" y="193.0" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+    <mxCell id="edge4" style="html=1;endArrow=none;dashed=1;endFill=0;startArrow=none;startFill=0;fillColor=black;strokeColor=black;strokeWidth=1;rounded=0;exitX=1.0000;exitY=0.5000;entryX=0.0000;entryY=0.5000;" parent="1" edge="1" source="node3" target="node5">
+      <mxGeometry as="geometry" relative="1">
+        <mxPoint x="825.3" y="68.0" as="sourcePoint" />
+        <mxPoint x="883.51" y="68.0" as="targetPoint" />
+      </mxGeometry>
+    </mxCell>
+  </root>
+</mxGraphModel>

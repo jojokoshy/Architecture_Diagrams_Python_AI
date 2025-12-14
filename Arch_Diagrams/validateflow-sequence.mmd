@@ -1,0 +1,51 @@
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  %% Receive payload with JourneyId
+  Note over Client: Client clicks 'Validate Task' on Main Screening Flow
+  Client->>iHubIn: POST payload (includes JourneyId)
+  iHubIn->>CLMAdaptor: Forward request
+  CLMAdaptor-->>iHubIn: 200 OK
+  iHubIn-->>Client: 200 OK
+
+  %% Decrypt and persist
+  CLMAdaptor->>KeyVault: Decrypt payload
+  KeyVault-->>CLMAdaptor: plaintext
+  CLMAdaptor->>DB: Persist payload
+
+  %% Query FenX for EntityIDs and Related Parties using JourneyId
+  CLMAdaptor->>iHubIn: Query FenX by JourneyId for EntityIDs + RelatedParties
+  iHubIn->>FenX: Query by JourneyId (RequestId, JourneyId)
+  FenX-->>iHubIn: EntityIDs + RelatedParties
+  iHubIn-->>CLMAdaptor: EntityIDs + RelatedParties
+
+ 
+
+  %% Loop per Entity -> convert JSON->XML locally, then call NetReveal by CustomerId
+  loop For each EntityID (and RelatedParty)
+    CLMAdaptor->>CLMAdaptor: Convert JSON -> XML (local) for entity payload
+    CLMAdaptor->>iHubOut: Call NetReveal API (CustomerId)
+    iHubOut->>NetReveal: Call NetReveal API (CustomerId)
+    NetReveal-->>iHubOut: Alerts / Screening result
+    iHubOut-->>CLMAdaptor: Alerts / Screening result
+  end
+
+  CLMAdaptor->>DB: Store screening results
+
+  alt No True Hits in Alerts
+    CLMAdaptor->>iHubIn: Request Close Validation Task (JourneyId)
+    iHubIn->>FenX: Close Validation Task (JourneyId)
+    FenX-->>iHubIn: 200 OK (Closed)
+    iHubIn-->>CLMAdaptor: 200 OK
+  else True Hits found
+    Note right of CLMAdaptor: TODO: True hits found — keep validation task open ?
+  end
+

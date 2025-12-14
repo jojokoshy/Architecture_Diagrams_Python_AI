@@ -26,13 +26,13 @@ subgraph EntityLoop[Per-Entity Processing]
   J --> K["Call NetReveal API (via iHubOut) using CustomerId"]:::step
   K --> L["NetReveal returns Alerts / Screening results"]:::step
   L --> M["Store screening results in Database"]:::step
+  M --> N{More entities to process?}:::decision
+  N -->|Yes| I
+  N -->|No| endloop[End entity loop]
 end
 
 H --> I
-M --> N{More entities to process?}:::decision
-N -->|Yes| I
-N -->|No| O{Any True Hits found?}:::decision
-
+endloop --> O{Any True Hits found?}:::decision
 
 O -->|No| P["CLM-Adaptor requests FenX to close Validation Task (JourneyId)"]:::step
 P --> Q["FenX closes Validation Task and returns 200 OK (Closed)"]:::step

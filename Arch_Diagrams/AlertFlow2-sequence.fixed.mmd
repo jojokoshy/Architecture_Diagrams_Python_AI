@@ -1,0 +1,48 @@
+sequenceDiagram
+    %% Participants (standard):
+    participant Client
+    participant iHubIn as "iHub API Mgmt (FenX)"
+    participant FenX as "FenX (Source API / SuperGraph)"
+    participant CLMAdaptor as "CLM-Adaptor"
+    participant KeyVault
+    participant DB as "Database"
+    participant iHubOut as "iHub API Mgmt (NetReveal)"
+    participant NetReveal
+
+    %% Guidance / conventions (from copilot-instructions.md):
+    %% - Use `iHubIn` for calls to FenX; FenX expects JSON and encrypted payloads.
+    %% - Use `KeyVault` to fetch keys/secrets and perform encrypt/decrypt locally.
+    %% - NetReveal communicates in XML; convert XML <-> JSON locally when needed.
+    %% - Show conversion and crypto steps explicitly in the sequence.
+
+    %% Job trigger and DB query for pending alerts
+    Client->>CLMAdaptor: Timer trigger (pending alerts job)
+    CLMAdaptor->>DB: Query PendingJourneyAlerts (Open alerts only)
+
+    loop For each Pending Alert
+      %% Query FenX for Journey Info via iHubIn (encrypted JSON)
+      CLMAdaptor->>KeyVault: get key/secret
+      CLMAdaptor->>iHubIn: send encrypted JSON request for Journey Info
+      iHubIn->>FenX: forward encrypted request
+      FenX-->>iHubIn: return encrypted JSON
+      iHubIn-->>CLMAdaptor: deliver encrypted JSON
+      CLMAdaptor->>KeyVault: decrypt response
+      CLMAdaptor->>CLMAdaptor: handle Journey Info (JSON)
+
+      alt FenX Journey Open?
+        CLMAdaptor->>iHubIn: update Journey (encrypted JSON)
+        iHubIn->>FenX: forward update
+        FenX-->>iHubIn: ack
+        iHubIn-->>CLMAdaptor: ack
+        CLMAdaptor->>DB: Update Alert and continue
+      else Journey Not Open
+        CLMAdaptor->>iHubIn: create Journey (encrypted JSON)
+        iHubIn->>FenX: forward create request
+        FenX-->>iHubIn: created confirmation
+        iHubIn-->>CLMAdaptor: deliver confirmation
+        CLMAdaptor->>DB: Update Alert; mark Pending Alert Closed
+      end
+    end
+
+    %% Final job update
+    CLMAdaptor->>DB: Update Pending Alerts job status: Success

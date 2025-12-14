@@ -1,0 +1,56 @@
+  sequenceDiagram
+    participant Client
+    participant iHubIn as "iHub API Mgmt (FenX)"
+    participant FenX as "FenX (Source API / SuperGraph)"
+    participant CLMAdaptor as "CLM-Adaptor"
+    participant KeyVault
+    participant DB as "Database"
+    participant iHubOut as "iHub API Mgmt (NetReveal)"
+    participant NetReveal
+
+    %% Job trigger and data retrieval
+    Client->>CLMAdaptor: Timer trigger (every 5 minutes)
+    CLMAdaptor->>DB: Get Start DateTime from JourneyAlert table
+
+    %% Call NetReveal via iHubOut and receive XML alerts
+    CLMAdaptor->>iHubOut: Call NetReveal TrueHit API (since Start DateTime)
+    iHubOut->>NetReveal: Forward TrueHit request
+    NetReveal-->>iHubOut: Return Alerts (XML)
+    iHubOut-->>CLMAdaptor: Deliver Alerts (XML)
+
+    loop For each Alert in Alerts array
+      CLMAdaptor->>CLMAdaptor: parse Alert (XML)
+      CLMAdaptor->>CLMAdaptor: convert XML -> JSON
+
+      alt Alert Status = Confirmed/Disapproved
+        %% Query FenX for Journey Info (via iHubIn). FenX expects JSON and encrypted payloads.
+        CLMAdaptor->>KeyVault: get key/secret
+        CLMAdaptor->>iHubIn: send encrypted JSON request for Journey Info
+        iHubIn->>FenX: forward encrypted request
+        FenX-->>iHubIn: return encrypted JSON response
+        iHubIn-->>CLMAdaptor: deliver encrypted JSON
+        CLMAdaptor->>KeyVault: decrypt response
+        CLMAdaptor->>CLMAdaptor: handle Journey Info (JSON)
+
+        alt Journey Open?
+          CLMAdaptor->>iHubIn: update Journey via FenX Receptor API (encrypted JSON)
+          iHubIn->>FenX: forward update
+          FenX-->>iHubIn: ack
+          iHubIn-->>CLMAdaptor: ack
+        else Journey Not Open
+          CLMAdaptor->>iHubIn: create Journey via FenX Journey API (encrypted JSON)
+          iHubIn->>FenX: forward create request
+          FenX-->>iHubIn: confirm created
+          iHubIn-->>CLMAdaptor: created confirmation
+        end
+
+      else Alert Status = Reopened
+        CLMAdaptor->>CLMAdaptor: handle reopen / continue loop
+
+      else Other
+        CLMAdaptor->>DB: Save Alert to PendingJourneyAlerts
+      end
+    end
+
+    %% Final job update
+    CLMAdaptor->>DB: Update JourneyAlert table: Job Success

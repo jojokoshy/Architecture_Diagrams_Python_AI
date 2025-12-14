@@ -19,13 +19,13 @@ C --> AlertsLoopStart((Loop: Alerts Array)):::loop
 subgraph AlertsLoop [Loop through Alerts]
 	direction TB
 	AlertsLoopStart --> D{Alert Status?}:::decision
-	D -->|Confirmed/Disapproved| E[Query FenX for Journey Info]:::step
+	D -->|Confirmed/Disapproved| E[Query FenX for Journey Info from FenX Journey API]:::step
 	D -->|Reopened| AlertsLoopStart
 
 	E --> F1{Journey Open?}:::decision
 	F1 -->|Yes| F2{At Screening Stage?}:::decision
-	F1 -->|No| J1[Initiate new screening journey]:::step
-	F2 -->|Yes| G[Update Journey via Receptor API]:::step
+	F1 -->|No| J1[Initiate new screening journey by calling FenX Journey API]:::step
+	F2 -->|Yes| G[Update Journey by calling FenX Receptor API]:::step
 	G --> AlertsLoopStart
 	F2 -->|No| I[Save Alert to PendingJourneyAlerts]:::step
 

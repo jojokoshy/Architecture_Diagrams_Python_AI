@@ -36,6 +36,41 @@ Key files and patterns (direct references)
 - `Arch_Diagrams/contoso_architecture.py` — manual example showing cluster usage, tier color patterns, and graph attributes.
 - `Arch_Diagrams/bicep_*` and `arm_*` scripts — show parsing approaches and common limitations (Bicep modules often require manual inspection).
 
+## Sequence Diagrams
+- **Purpose:** Common participant list for project sequence diagrams.
+- **Default participants:** Include the following at the top of most sequence diagrams (adjust per diagram):
+
+```mermaid
+participant Client
+participant iHubIn as "iHub API Mgmt (FenX)"
+participant FenX as "FenX (Source API / SuperGraph)"
+participant CLMAdaptor as "CLM-Adaptor"
+participant KeyVault
+participant DB as "Database"
+participant iHubOut as "iHub API Mgmt (NetReveal)"
+participant NetReveal
+```
+
+- **Guidance:** Place this participant block near the top of your sequence diagram files (e.g., `.mmd`) before interactions. Keep names consistent to aid readability and tooling that may parse these files.
+
+- **iHub routing & layout:** All calls to `FenX` and `NetReveal` traverse the iHub API participants (`iHubIn` / `iHubOut`). For readability, keep the `iHubIn` (FenX side) on the left and `iHubOut` (NetReveal side) on the right in your participant lists and diagrams. This ordering helps viewers quickly see the inbound (FenX) and outbound (NetReveal) boundaries.
+
+- **Data formats & security:**
+	- **FenX format:** Calls to `FenX` use JSON. When results from `NetReveal` are sent to `FenX`, the first step is to convert XML → JSON locally (typically inside `CLM-Adaptor`).
+	- **NetReveal format:** Calls to `NetReveal` use XML. Before calling `NetReveal`, perform a local JSON → XML conversion.
+	- **Encryption / KeyVault:** Calls to and from `FenX` must be encrypted. Encryption should be performed locally in `CLM-Adaptor` using `KeyVault` to obtain keys/secrets. Calls received from `FenX` must be decrypted (use `KeyVault` as the decrypting actor in the diagram).
+	- **Where to show steps:** Represent conversion and crypto operations explicitly as interactions in the sequence diagrams (for example: `CLM-Adaptor -> CLM-Adaptor: convert XML->JSON`, `CLM-Adaptor -> KeyVault: get key`, `CLM-Adaptor -> FenX: encrypted JSON`). Use clear labels `convert XML->JSON`, `encrypt with KeyVault`, `decrypt with KeyVault`, `convert JSON->XML`.
+
+- **Example flow (high-level):**
+	- `NetReveal` -> `CLM-Adaptor`: XML result
+	- `CLM-Adaptor`: convert XML -> JSON
+	- `CLM-Adaptor` -> `KeyVault`: retrieve key/secret
+	- `CLM-Adaptor`: encrypt JSON with KeyVault
+	- `CLM-Adaptor` -> `FenX`: send encrypted JSON
+	- `FenX` -> `CLM-Adaptor`: encrypted JSON response
+	- `CLM-Adaptor` -> `KeyVault`: decrypt response
+	- `CLM-Adaptor`: convert JSON -> XML (if forwarding to `NetReveal`)
+
 Project-specific conventions & patterns
 - Clusters: use `Cluster(...)` to group VNets, subnets, and tiers. The codebase relies on cluster background colors to visually separate tiers (see `agent.md` color examples).
 - Icon naming: class names are case-sensitive and may differ from common guesses. Example: use `PublicIpAddresses` (correct) not `PublicIPAddresses` (wrong). When unsure, import the module and `print(dir(module))` to list symbols.

@@ -7,8 +7,42 @@ classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
 classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 
-A[Receive HTTP POST via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
-B --> C[Decrypt payload using Azure Key Vault keys]:::step
-C --> D[Store payload in database]:::step
-D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step 
-E --> FenX[Call FenX Validation REST API -- Validate RPs]:::step
+subgraph ClientFlow[Client Interaction]
+  A["Client clicks 'Validate Task' on Main Screening Flow"]:::step
+end
+
+A --> B["POST payload to iHub API Gateway (includes JourneyId)"]:::step
+B --> C["iHub forwards request to CLM-Adaptor"]:::step
+C --> D["Respond 200 OK to client immediately"]:::step
+D --> E["CLM-Adaptor decrypts payload using Key Vault"]:::step
+E --> F["Persist plaintext payload into Database"]:::step
+F --> G["CLM-Adaptor queries FenX (by JourneyId) for EntityIDs & RelatedParties"]:::step
+G --> H["FenX (SuperGraph) returns EntityIDs & RelatedParties"]:::step
+
+subgraph EntityLoop[Per-Entity Processing]
+  direction TB
+  I["Process each EntityID / RelatedParty"]:::loop
+  I --> J["Convert JSON -> XML locally for the entity payload"]:::step
+  J --> K["Call NetReveal API (via iHubOut) using CustomerId"]:::step
+  K --> L["NetReveal returns Alerts / Screening results"]:::step
+  L --> M["Store screening results in Database"]:::step
+end
+
+H --> I
+M --> N{More entities to process?}:::decision
+N -->|Yes| I
+N -->|No| O{Any True Hits found?}:::decision
+
+
+O -->|No| P["CLM-Adaptor requests FenX to close Validation Task (JourneyId)"]:::step
+P --> Q["FenX closes Validation Task and returns 200 OK (Closed)"]:::step
+Q --> R["CLM-Adaptor records closure"]:::step
+
+O -->|Yes| S["Keep Validation Task open for manual review"]:::step
+S --> T["Notify operators / flag for human investigation"]:::step
+
+class A,B,C,D,E,F,G,H,J,K,L,M,P,Q,R,S,T step
+class O,N decision
+class I loop
+ 
+ 

@@ -6,9 +6,9 @@ erDiagram
     %%  - Multiplicity notation follows Mermaid ER style: || = one, }o = many/optional.
     ScreeningBatch {
         int ID PK
-        int BatchId
-        int ProcessId
         int JourneyId
+        int ProcessId
+        int BatchId
         string BatchStage
         date CreatedOn
         string CreatedBy
@@ -18,9 +18,9 @@ erDiagram
 
     RequestResponsePayload {
         int ID PK
-        int BatchId FK ScreeningBatch BatchId 
         int JourneyId FK ScreeningBatch JourneyId
         int ProcessId FK ScreeningBatch ProcessId
+        int BatchId FK ScreeningBatch BatchId 
         string Payload
         date CreatedOn
         string CreatedBy
@@ -52,8 +52,9 @@ erDiagram
 
     ScreeningHit {
         int ID PK
-        int BatchId
-        int JourneyId
+        int BatchId FK ScreeningBatch BatchId
+        int JourneyId FK ScreeningBatch JourneyId
+        int ProcessId FK ScreeningBatch ProcessId
         int AlertId
         bool HitNoHit
         date CreatedOn
@@ -67,6 +68,7 @@ erDiagram
         int BatchId FK ScreeningBatch BatchId
         int JourneyId FK ScreeningBatch JourneyId
         int ScreeningHitId FK ScreeningHit ID
+        int AlertId FK ScreeningHit AlertId
         int ScreeningEntityId FK ScreeningEntity ID
         string EntityType
         string EntityName

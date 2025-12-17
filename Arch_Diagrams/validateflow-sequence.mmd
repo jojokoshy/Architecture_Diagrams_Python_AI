@@ -40,12 +40,13 @@ sequenceDiagram
 
   CLMAdaptor->>DB: Store screening results
 
-  alt No True Hits in Alerts
+  alt No Open Alerts in Alerts
     CLMAdaptor->>iHubIn: Request Close Validation Task (JourneyId)
     iHubIn->>FenX: Close Validation Task (JourneyId)
     FenX-->>iHubIn: 200 OK (Closed)
     iHubIn-->>CLMAdaptor: 200 OK
-  else True Hits found
-    Note right of CLMAdaptor: TODO: True hits found — keep validation task open ?
+  else Open Alerts found
+    Note right of CLMAdaptor: TODO: Open Alerts found — Need Info from FenX team  
+  
   end
 

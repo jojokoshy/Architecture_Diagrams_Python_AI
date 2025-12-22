@@ -11,7 +11,7 @@ A[Receive HTTP POST due to Cancel Event via Hub API Gateway]:::step --> B[Respon
 B --> C[Decrypt payload using Azure Key Vault keys]:::step
 C --> D[Store payload in database]:::step
 D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step
-E --> FenX[Call FenX to Fetch Draft Entity/Related Entities]:::step
+E --> FenX[Call FenX to Fetch <b>Verified Entity/Related Entities</b> ]:::step
 FenX --> LoopStart((Loop: Entities)):::loop
 
 subgraph EntitiesLoop [Loop through Entities]

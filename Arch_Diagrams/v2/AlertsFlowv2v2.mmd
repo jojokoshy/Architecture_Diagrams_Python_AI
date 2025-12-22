@@ -1,0 +1,69 @@
+%%{init: {"theme":"default","themeVariables": {"background":"#ffffff","fontSize":"14"}}}%%
+flowchart LR
+
+%% Shared styles
+classDef step fill:#ffffff,stroke:#2b6cb0,color:#0f172a,stroke-width:1px;
+classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
+classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
+classDef footer fill:#ffffff,stroke:none,color:#0f172a;
+
+subgraph MainFlow [Main Flow]
+  direction TB
+
+  A[Receive HTTP Request as input due to event raised by FenX]:::step --> B[Get details about the journey from FenX like EntityID and Related EntityIDs]:::step
+  B --> AlertsLoopStart((Loop: Entity/RP Array)):::loop
+
+  subgraph AlertsLoop [Loop through Entity/RP Array]
+    direction TB
+    AlertsLoopStart --> C[Call NetReveal - Customer Get Alerts API - with CustomerID, JourneyStartDateTime, EndDateTime]:::step
+    C --> D{Alert Status?}:::decision
+    D -->|Confirmed/Disapproved| E[Save the Alert Details to Database]:::step
+    D -->|Reopened| AlertsLoopStart
+  end
+
+  AlertsLoop --> F1[Read from all unprocessed alerts Filter By EntityID where ScreeningAlertDetails rowcount >= ScreeningAlert rowcount by BatchId]:::step
+
+  F1 --> J1[Group all Alerts from ScreeningAlertDetails by BatchId]:::step
+
+  J1 --> BatchLoopStart((Loop: For every BatchId)):::loop
+
+  subgraph BatchLoop [Loop: For every Unique BatchId]
+    direction TB
+    BatchLoopStart --> J2[Submit to Receptor API all Alerts with same BatchId with Flag indicating Screening Type]:::step
+    J2 --> BatchLoopStart
+  end
+
+  BatchLoop --> BottomAnchor(( ))
+
+  BottomAnchor --> N[Change flag of all AlertsIds that were successfully sent to FenX]:::step
+  N --> O[Update JourneyAlert table: Job Success]:::footer
+end
+
+style MainFlow stroke-dasharray: 5 5
+
+%% Decision between main and error blocks
+IfError{if error?}:::decision
+
+%% Error handling block to the right
+subgraph ErrorHandler [Error handling]
+  direction TB
+  EH1[Log Error to Error table]:::step
+  EH2[Call Receptor API with Error details]:::step
+  EH1 --> EH2
+end
+
+style ErrorHandler fill:#ffe6e6,stroke:#ff0000,stroke-dasharray: 5 5
+
+%% Connections: only between blocks (not individual nodes)
+MainFlow -.-> IfError
+IfError -.-> ErrorHandler
+
+%% Comments  Legend keep below
+subgraph Comments [Comments / Legend]
+  direction TB
+  style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
+  note1[Note: This is the new flow triggered by FenX events.]:::footer
+  note2[Loop nodes indicate iterations over collections such as Entity/RP Array and BatchId.]:::footer
+end
+
+class BottomAnchor footer

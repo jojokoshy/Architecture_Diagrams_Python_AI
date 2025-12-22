@@ -1,0 +1,36 @@
+%%{init: {"theme":"default","themeVariables": {"background":"#ffffff","fontSize":"14"}}}%%
+flowchart TB
+
+%% Shared styles (matching AlertsFlow)
+classDef step fill:#ffffff,stroke:#2b6cb0,color:#0f172a,stroke-width:1px;
+classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
+classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
+classDef footer fill:#ffffff,stroke:none,color:#0f172a;
+
+A[Receive HTTP POST via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
+B --> C[Decrypt payload using Azure Key Vault keys]:::step
+C --> D[Store payload in database]:::step
+D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step
+E --> FenX[Call FenX Association Query API with Entity ID and Journey<br/>Call the /api/association/root/&#123;EntityId&#125;/journey/&#123;JourneyId&#125;/proposedChanges/hierarchy API and get the array of entities with action type]:::step
+FenX --> F{Any returned Entities Marked as InActive in Journey?}:::decision
+G[Query SuperGraph with Inactive EntityIDs to find Related EntityIDs]:::step
+F -- Yes --> G
+F -- No --> L[Get OrgUnit from Azure SQL DB - Branch and Department mapping]:::step
+G --> H{Check Related Entities: Any related entities found?}:::decision
+H -- No --> Inactive[Mark Entities with Empty Related Entities as InActive]:::step
+H -- Yes --> Active[Mark Entities with Related Entities Array Count >= 1 as Active]:::step
+Inactive --> L
+Active --> L
+
+L --> M[Convert SuperGraph JSON to XML with Liquid Templates]:::step
+M --> LoopStart((Loop: Entities)):::loop
+
+subgraph EntitiesLoop [Loop through Entities]
+  direction TB
+  LoopStart --> N[Call NetReveal Screening API for entity i]:::step
+  N --> Q{More entities to process?}:::decision
+  Q -- Yes --> LoopStart
+  Q -- No --> O[Store after all NetReveal calls succeed]:::step
+end
+
+O --> P[End process - No response sent back to FenX]:::footer

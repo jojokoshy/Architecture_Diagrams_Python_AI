@@ -7,6 +7,15 @@ classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
 classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 
+
+%% Comments / Legend (kept at top)
+subgraph Comments [Comments / Legend]
+  direction TB
+  style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
+  note1[Note: This is the new flow triggered by FenX events.]:::footer
+  note2[Loop nodes indicate iterations over collections such as Entity/RP Array and BatchId.]:::footer
+end
+
 subgraph MainFlow [Main Flow]
   direction TB
 
@@ -22,6 +31,7 @@ subgraph MainFlow [Main Flow]
   end
 
   AlertsLoop --> F1[Read from all unprocessed alerts Filter By EntityID where ScreeningAlertDetails rowcount >= ScreeningAlert rowcount by BatchId]:::step
+  E -.-> F1
 
   F1 --> J1[Group all Alerts from ScreeningAlertDetails by BatchId]:::step
 
@@ -54,16 +64,16 @@ end
 
 style ErrorHandler fill:#ffe6e6,stroke:#ff0000,stroke-dasharray: 5 5
 
-%% Connections: only between blocks (not individual nodes)
-MainFlow -.-> IfError
-IfError -.-> ErrorHandler
-
-%% Comments  Legend keep below
+%% Comments / Legend: place at right of Main Flow to avoid vertical scroll
 subgraph Comments [Comments / Legend]
   direction TB
   style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
   note1[Note: This is the new flow triggered by FenX events.]:::footer
   note2[Loop nodes indicate iterations over collections such as Entity/RP Array and BatchId.]:::footer
 end
+
+%% Connections: only between blocks (not individual nodes)
+MainFlow -.-> IfError
+IfError -.-> ErrorHandler
 
 class BottomAnchor footer

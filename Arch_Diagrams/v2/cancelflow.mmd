@@ -7,7 +7,7 @@ classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
 classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 
-A[Receive HTTP POST via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
+A[Receive HTTP POST due to Cancel Event via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
 B --> C[Decrypt payload using Azure Key Vault keys]:::step
 C --> D[Store payload in database]:::step
 D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step

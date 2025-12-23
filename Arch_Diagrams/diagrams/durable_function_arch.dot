@@ -1,0 +1,306 @@
+digraph "Azure Durable Function Architecture" {
+	graph [bb="0,0,1075,1236.6",
+		bgcolor=white,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=12,
+		label="Azure Durable Function Architecture",
+		lheight=0.22,
+		lp="537.5,11.875",
+		lwidth=2.65,
+		nodesep=0.8,
+		pad=0.5,
+		rankdir=TB,
+		ranksep=1.2,
+		splines=ortho
+	];
+	node [fixedsize=true,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		height=1.4,
+		imagescale=true,
+		label="\N",
+		labelloc=b,
+		shape=box,
+		style=rounded,
+		width=1.4
+	];
+	edge [color="#7B8894"];
+	subgraph "cluster_vnet-namescreening
+10.10.0.0/16" {
+		graph [bb="8,240.55,951,1032.2",
+			bgcolor="#E5F5FD",
+			fontname="Sans-Serif",
+			fontsize=12,
+			label="vnet-namescreening
+10.10.0.0/16",
+			labeljust=l,
+			lheight=0.44,
+			lp="68.875,1012.5",
+			lwidth=1.47,
+			pencolor="#AEB6BE",
+			rankdir=LR,
+			shape=box,
+			style=rounded
+		];
+		subgraph "cluster_snet-durablefunction
+10.10.1.0/24" {
+			graph [bb="652,776.95,787,984.75",
+				bgcolor="#E3F2FD",
+				fontname="Sans-Serif",
+				fontsize=13,
+				label="snet-durablefunction
+10.10.1.0/24",
+				labeljust=l,
+				lheight=0.46,
+				lp="719.62,964.25",
+				lwidth=1.66,
+				margin=15,
+				pencolor="#AEB6BE",
+				rankdir=LR,
+				shape=box,
+				style=rounded
+			];
+			"12a6d51a202f44ea8969bd3ffa6049cd"	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/compute\function-apps.png",
+				label="clm-ns-durable-function",
+				pos="719,860.35",
+				shape=none];
+		}
+		subgraph "cluster_snet-backend
+10.10.2.0/24" {
+			graph [bb="162,248.55,315,724.45",
+				bgcolor="#F3E5F5",
+				fontname="Sans-Serif",
+				fontsize=13,
+				label="snet-backend
+10.10.2.0/24",
+				labeljust=l,
+				lheight=0.46,
+				lp="209,703.95",
+				lwidth=1.08,
+				margin=15,
+				pencolor="#AEB6BE",
+				rankdir=LR,
+				shape=box,
+				style=rounded
+			];
+			"2c52cce6035e4efca4f8d1392e2e777b"	[height=2.3,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/storage\storage-accounts.png",
+				label="sq-namescreening-
+orchestration",
+				pos="242,585.65",
+				shape=none];
+			"113c8050fe3046b890cce8cc3139557f"	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/storage\table-storage.png",
+				label="Storage Tables",
+				pos="235,331.95",
+				shape=none];
+			"2c52cce6035e4efca4f8d1392e2e777b" -> "113c8050fe3046b890cce8cc3139557f"	[dir=forward,
+				fontcolor="#2D3436",
+				fontname="Sans-Serif",
+				fontsize=13,
+				label=orchestrate,
+				lp="267.25,451.6",
+				pos="e,238.5,400.15 238.5,502.93 238.5,502.93 238.5,411.67 238.5,411.67"];
+		}
+		subgraph "cluster_snet-data
+10.10.3.0/24" {
+			graph [bb="336,248.55,943,710.05",
+				bgcolor="#FFF3E0",
+				fontname="Sans-Serif",
+				fontsize=13,
+				label="snet-data
+10.10.3.0/24",
+				labeljust=l,
+				lheight=0.46,
+				lp="379.25,689.55",
+				lwidth=0.98,
+				margin=15,
+				pencolor="#AEB6BE",
+				rankdir=LR,
+				shape=box,
+				style=rounded
+			];
+			cd166e9fc7a245ffa2ed5b77feca96d1	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/database\sql-servers.png",
+				label="sqlsrv-namescreening",
+				pos="560,585.65",
+				shape=none];
+			c6fd4070e7f64c279e86c3d837b3aaa1	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/database\sql-databases.png",
+				label="sqldb-ns",
+				pos="691,331.95",
+				shape=none];
+			cd166e9fc7a245ffa2ed5b77feca96d1 -> c6fd4070e7f64c279e86c3d837b3aaa1	[dir=forward,
+				fontcolor="#2D3436",
+				fontname="Sans-Serif",
+				fontsize=13,
+				pos="e,654.6,400.3 610.35,585.75 632.94,585.75 654.6,585.75 654.6,585.75 654.6,585.75 654.6,411.81 654.6,411.81"];
+			ad8c63b96e54400995ab262320c3e2a2	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/storage\storage-accounts.png",
+				label="ns-storage",
+				pos="850,331.95",
+				shape=none];
+			cb75d1d5e2f04cfcab9af4046137129a	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/security\key-vaults.png",
+				label="kv-ns",
+				pos="410,331.95",
+				shape=none];
+			"97392d9fae0f42df9b1649d0a8bd3dd8"	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/network\private-endpoint.png",
+				label="pe-sql",
+				pos="719,585.65",
+				shape=none];
+			"97392d9fae0f42df9b1649d0a8bd3dd8" -> c6fd4070e7f64c279e86c3d837b3aaa1	[dir=forward,
+				fontcolor="#2D3436",
+				fontname="Sans-Serif",
+				fontsize=13,
+				pos="e,705,399.95 705,517.33 705,517.33 705,411.47 705,411.47"];
+			"925b4a6c53ff4e17b3f80e8388c3c13c"	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/network\private-endpoint.png",
+				label="pe-storage",
+				pos="878,585.65",
+				shape=none];
+			"925b4a6c53ff4e17b3f80e8388c3c13c" -> ad8c63b96e54400995ab262320c3e2a2	[dir=forward,
+				fontcolor="#2D3436",
+				fontname="Sans-Serif",
+				fontsize=13,
+				pos="e,864,399.95 864,517.33 864,517.33 864,411.47 864,411.47"];
+			"2e63511923d646b4bcddb5b7e25df841"	[height=1.9,
+				image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/network\private-endpoint.png",
+				label="pe-kv",
+				pos="401,585.65",
+				shape=none];
+			"2e63511923d646b4bcddb5b7e25df841" -> cb75d1d5e2f04cfcab9af4046137129a	[dir=forward,
+				fontcolor="#2D3436",
+				fontname="Sans-Serif",
+				fontsize=13,
+				pos="e,420.8,399.95 420.8,517.33 420.8,517.33 420.8,411.47 420.8,411.47"];
+		}
+		"12a6d51a202f44ea8969bd3ffa6049cd" -> "2c52cce6035e4efca4f8d1392e2e777b"	[dir=forward,
+			fontcolor="#2D3436",
+			fontname="Sans-Serif",
+			fontsize=13,
+			label=enqueue,
+			lp="343.12,740.7",
+			pos="e,292.13,661.75 702.2,792 702.2,734.56 702.2,661.75 702.2,661.75 702.2,661.75 303.64,661.75 303.64,661.75"];
+		"12a6d51a202f44ea8969bd3ffa6049cd" -> "113c8050fe3046b890cce8cc3139557f"	[dir=forward,
+			fontcolor="#2D3436",
+			fontname="Sans-Serif",
+			fontsize=13,
+			label="read/write",
+			lp="103.62,585.65",
+			pos="e,188.1,400.32 669.05,882.75 536.89,882.75 188.1,882.75 188.1,882.75 188.1,882.75 188.1,411.83 188.1,411.83"];
+		"12a6d51a202f44ea8969bd3ffa6049cd" -> "97392d9fae0f42df9b1649d0a8bd3dd8"	[dir=forward,
+			fontcolor="#2D3436",
+			fontname="Sans-Serif",
+			fontsize=13,
+			label=private,
+			lp="738.5,740.7",
+			pos="e,735.8,654.03 735.8,792.09 735.8,792.09 735.8,665.54 735.8,665.54"];
+		"12a6d51a202f44ea8969bd3ffa6049cd" -> "925b4a6c53ff4e17b3f80e8388c3c13c"	[dir=forward,
+			fontcolor="#2D3436",
+			fontname="Sans-Serif",
+			fontsize=13,
+			label=private,
+			lp="869.5,740.7",
+			pos="e,878,653.81 769.31,825.75 815.89,825.75 878,825.75 878,825.75 878,825.75 878,665.32 878,665.32"];
+		"12a6d51a202f44ea8969bd3ffa6049cd" -> "2e63511923d646b4bcddb5b7e25df841"	[dir=forward,
+			fontcolor="#2D3436",
+			fontname="Sans-Serif",
+			fontsize=13,
+			label=secrets,
+			lp="528.25,740.7",
+			pos="e,401,653.87 668.61,837.75 578.94,837.75 401,837.75 401,837.75 401,837.75 401,665.39 401,665.39"];
+		"2c52cce6035e4efca4f8d1392e2e777b" -> cb75d1d5e2f04cfcab9af4046137129a	[dir=forward,
+			fontcolor="#2D3436",
+			fontname="Sans-Serif",
+			fontsize=13,
+			label=secrets,
+			lp="383.25,451.6",
+			pos="e,390.2,400.18 292.17,509.75 335.17,509.75 390.2,509.75 390.2,509.75 390.2,509.75 390.2,411.7 390.2,411.7"];
+	}
+	subgraph cluster_Monitoring {
+		graph [bb="792,31.75,1067,208.3",
+			bgcolor="#E5F5FD",
+			fontname="Sans-Serif",
+			fontsize=12,
+			label=Monitoring,
+			labeljust=l,
+			lheight=0.22,
+			lp="828.5,196.42",
+			lwidth=0.79,
+			pencolor="#AEB6BE",
+			rankdir=LR,
+			shape=box,
+			style=rounded
+		];
+		"7a53fc151d8e4c7e92bb7d00fb1180b9"	[height=1.9,
+			image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/analytics\log-analytics-workspaces.png",
+			label="law-ns",
+			pos="850,108.15",
+			shape=none];
+		"3e446466512b4d6593841b81f476edd8"	[height=1.9,
+			image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/azure/devops\application-insights.png",
+			label="appi-ns",
+			pos="1009,108.15",
+			shape=none];
+	}
+	b5b7797788fa44e58f54d2644648786d	[height=1.9,
+		image="C:\Users\jojo.koshy\source\Architecture_Diagrams_Python_AI\Arch_Diagrams\venv\Lib\site-packages\resources/onprem/client\users.png",
+		label=Users,
+		pos="719,1168.2",
+		shape=none];
+	b5b7797788fa44e58f54d2644648786d -> "12a6d51a202f44ea8969bd3ffa6049cd"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		label=HTTPS,
+		lp="738.5,1048.5",
+		pos="e,719,928.74 719,1099.8 719,1099.8 719,940.25 719,940.25"];
+	"12a6d51a202f44ea8969bd3ffa6049cd" -> "7a53fc151d8e4c7e92bb7d00fb1180b9"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		pos="e,799.69,153.75 769.31,860.75 778.1,860.75 784.5,860.75 784.5,860.75 784.5,860.75 784.5,153.75 784.5,153.75 784.5,153.75 788.18,\
+153.75 788.18,153.75",
+		style=dotted];
+	"12a6d51a202f44ea8969bd3ffa6049cd" -> "3e446466512b4d6593841b81f476edd8"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		pos="e,1009,176.24 769.18,894.75 852.18,894.75 1009,894.75 1009,894.75 1009,894.75 1009,187.75 1009,187.75",
+		style=dotted];
+	"2c52cce6035e4efca4f8d1392e2e777b" -> "7a53fc151d8e4c7e92bb7d00fb1180b9"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		pos="e,799.71,85.75 288.9,503.1 288.9,361.12 288.9,85.75 288.9,85.75 288.9,85.75 788.2,85.75 788.2,85.75",
+		style=dotted];
+	"113c8050fe3046b890cce8cc3139557f" -> "7a53fc151d8e4c7e92bb7d00fb1180b9"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		pos="e,799.67,62.75 235,263.67 235,183.92 235,62.75 235,62.75 235,62.75 788.16,62.75 788.16,62.75",
+		style=dotted];
+	c6fd4070e7f64c279e86c3d837b3aaa1 -> "7a53fc151d8e4c7e92bb7d00fb1180b9"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		pos="e,799.69,130.75 691,263.55 691,205.22 691,130.75 691,130.75 691,130.75 788.18,130.75 788.18,130.75",
+		style=dotted];
+	ad8c63b96e54400995ab262320c3e2a2 -> "7a53fc151d8e4c7e92bb7d00fb1180b9"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		pos="e,850,176.48 850,263.59 850,263.59 850,187.99 850,187.99",
+		style=dotted];
+	cb75d1d5e2f04cfcab9af4046137129a -> "7a53fc151d8e4c7e92bb7d00fb1180b9"	[dir=forward,
+		fontcolor="#2D3436",
+		fontname="Sans-Serif",
+		fontsize=13,
+		pos="e,799.95,107.75 410,263.77 410,197.81 410,107.75 410,107.75 410,107.75 788.44,107.75 788.44,107.75",
+		style=dotted];
+}

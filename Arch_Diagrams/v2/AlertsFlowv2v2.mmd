@@ -24,6 +24,8 @@ subgraph MainFlow [Main Flow]
 
   subgraph AlertsLoop [Loop through Entity/RP Array]
     direction TB
+    %% Here we can first call the NetReveal API to get Open Alerts for the EntityID, If there are still open Alerts then we should skip calling the Customer Get Alerts API and 
+    %% exit the Loop and finish the Call.
     AlertsLoopStart --> C[Call NetReveal - Customer Get Alerts API - with CustomerID, JourneyStartDateTime, EndDateTime]:::step
     C --> D{Alert Status?}:::decision
     D -->|Confirmed/Disapproved| E[Save the Alert Details to Database]:::step

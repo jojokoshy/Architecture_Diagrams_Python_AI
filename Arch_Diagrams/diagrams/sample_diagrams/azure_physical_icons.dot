@@ -1,0 +1,27 @@
+digraph AzureDurablePhysical {
+  rankdir=LR;
+  bgcolor=transparent;
+  node [fontsize=10, shape=none, margin=0];
+
+  // Nodes using official Azure icons (PNG) from diagrams/icons
+  Client [label="User", image="icons/user.png", labelloc=b, width=1.0];
+  DFHttp [label="Durable Function\n(HTTP Orchestrator)", image="icons/azure_function.png", labelloc=b, width=1.4];
+  DFActivity [label="Durable Function\n(Activity)", image="icons/azure_function.png", labelloc=b, width=1.4];
+  StorageQ [label="Azure Storage\nQueue", image="icons/storage_queue.png", labelloc=b, width=1.2];
+  StorageT [label="Azure Storage\nTable", image="icons/storage_table.png", labelloc=b, width=1.2];
+  SqlDB [label="Azure SQL\nDatabase", image="icons/sql_db.png", labelloc=b, width=1.2];
+  KV [label="Azure Key\nVault", image="icons/key_vault.png", labelloc=b, width=1.2];
+
+  // Edges and labels
+  Client -> DFHttp [label="HTTP Request", fontsize=10];
+  DFHttp -> DFActivity [label="Invoke", fontsize=10];
+
+  DFHttp -> StorageQ [style=dashed, label="enqueue / dequeue events", fontsize=9];
+  DFHttp -> StorageT [style=dashed, label="state & history", fontsize=9];
+
+  DFActivity -> SqlDB [label="CRUD", fontsize=10];
+  DFActivity -> KV [label="Secrets / Keys", fontsize=10];
+
+  // Force horizontal layout grouping
+  { rank = same; Client; DFHttp; DFActivity; }
+}

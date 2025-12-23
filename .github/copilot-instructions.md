@@ -31,6 +31,7 @@ Where to run work and common commands
 
 Key files and patterns (direct references)
 - `Arch_Diagrams/agent.md` — high-value agent instructions and environment notes. Use this as the canonical list of environment steps and examples.
+- `Arch_Diagrams/icons - All official Azure icons are in this folder as SVG files grouped by category. Use these in diagrams by referencing the class names (e.g., `VirtualMachines`).
 - `Arch_Diagrams/requirements.txt` — exact Python deps and notes about `pygraphviz` and GraphViz.
 - `Arch_Diagrams/terraform_to_diagram.py` — parser for Terraform files; it extracts `resource "type" "name"` blocks, `depends_on`, and reference patterns like `azurerm_*` to infer relationships.
 - `Arch_Diagrams/contoso_architecture.py` — manual example showing cluster usage, tier color patterns, and graph attributes.

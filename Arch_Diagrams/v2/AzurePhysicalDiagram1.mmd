@@ -1,0 +1,26 @@
+%% Azure Durable Functions physical flow
+graph TD
+    Client[User / Client] -->|HTTP Request| DFHttp[Azure Durable Function<br/>HTTP Trigger Orchestrator]
+
+    DFHttp -->|Invoke| DFActivity[Durable Function<br/>Activity Function]
+
+    %% Implicit bindings used by Durable Functions runtime
+    DFHttp -.enqueue/dequeue events .-> StorageQ[Azure Storage Queue]
+    DFHttp -.state & history .-> StorageT[Azure Storage Table]
+
+    %% Downstream dependencies
+    DFActivity -->|CRUD| SqlDB[Azure SQL Database]
+    DFActivity -->|Secrets / Keys| KV[Azure Key Vault]
+
+    %% Styling
+    classDef azure fill:#0072C6,stroke:#fff,stroke-width:1,color:#fff;
+    classDef storage fill:#804998,stroke:#fff,stroke-width:1,color:#fff;
+    classDef data fill:#0F9D58,stroke:#fff,stroke-width:1,color:#fff;
+    class Client default;
+    class DFHttp,DFActivity azure;
+    class StorageQ,StorageT storage;
+    class SqlDB data;
+    class KV azure;
+%% Note: For a version with Azure icons, see the DOT diagram
+%% file: ../diagrams/azure_physical_icons.dot and the rendered PNG
+%% at ../diagrams/azure_physical_icons.png (if rendered).

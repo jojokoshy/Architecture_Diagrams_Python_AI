@@ -9,9 +9,9 @@ Run (from Arch_Diagrams):
 """
 from diagrams import Diagram, Cluster, Edge
 from diagrams.azure.compute import FunctionApps
-from diagrams.azure.network import VirtualNetworks, PrivateEndpoint
-from diagrams.azure.database import SQLServers, SQLDatabases
-from diagrams.azure.storage import StorageAccounts, BlobStorage, TableStorage, QueuesStorage
+from diagrams.azure.network import VirtualNetworks
+from diagrams.azure.database import SQLDatabases
+from diagrams.azure.storage import StorageAccounts, TableStorage, QueuesStorage
 from diagrams.azure.security import KeyVaults
 from diagrams.azure.analytics import LogAnalyticsWorkspaces
 from diagrams.azure.devops import ApplicationInsights
@@ -63,20 +63,14 @@ with Diagram("Azure Durable Function Architecture", filename=OUT_BASE, outformat
         
         # Backend Subnet
         with Cluster("snet-backend\n10.10.2.0/24", graph_attr=backend_cluster_attr):
-            storage_queue = StorageAccounts("sq-namescreening-\norchestration")
+            storage_queue = QueuesStorage("sq-namescreening-\norchestration")
             storage_tables = TableStorage("Storage Tables")
         
         # Data Tier Subnet
         with Cluster("snet-data\n10.10.3.0/24", graph_attr=data_cluster_attr):
-            sql_srv = SQLServers("sqlsrv-namescreening")
             sql_db = SQLDatabases("sqldb-ns")
             storage_acct = StorageAccounts("ns-storage")
             kv = KeyVaults("kv-ns")
-            
-            # Private Endpoints
-            pe_sql = PrivateEndpoint("pe-sql")
-            pe_storage = PrivateEndpoint("pe-storage")
-            pe_kv = PrivateEndpoint("pe-kv")
 
     # Monitoring (bottom-centre, outside VNet)
     with Cluster("Monitoring"):
@@ -86,19 +80,13 @@ with Diagram("Azure Durable Function Architecture", filename=OUT_BASE, outformat
     # Main flow connections
     users >> Edge(label="HTTPS") >> func
     func >> Edge(label="enqueue") >> storage_queue
-    storage_queue >> Edge(label="orchestrate") >> storage_tables
-    func >> Edge(label="read/write") >> storage_tables
+    storage_queue >> Edge(label="process") >> storage_tables
+    func >> storage_tables
     
-    # Function to data tier via private endpoints
-    func >> Edge(label="private") >> pe_sql >> sql_db
-    func >> Edge(label="private") >> pe_storage >> storage_acct
-    func >> Edge(label="secrets") >> pe_kv >> kv
-    
-    # SQL Server to Database
-    sql_srv >> sql_db
-    
-    # All apps → Key Vault for secrets
-    storage_queue >> Edge(label="secrets") >> kv
+    # Function to data tier
+    func >> sql_db
+    func >> storage_acct
+    func >> Edge(label="secrets") >> kv
     
     # Monitoring connections
     func >> Edge(style="dotted") >> law

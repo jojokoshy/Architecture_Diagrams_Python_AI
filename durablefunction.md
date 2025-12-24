@@ -5,12 +5,7 @@ One subscription, one VNet, azure durable function, Azure Storage Queue, Azure S
 Resources:
 
 1. **Networking**
-   - VNet: "vnet-namescreening" (10.10.0.0/16)
-   - Subnets:
-         - "snet-durablefunction" (10.10.1.0/24)
-         - "snet-backend" (10.10.2.0/24)
-         - "snet-data" (10.10.3.0/24) 
-   
+   - VNet: "vnet-namescreening" (10.10.0.0/16)   
 
 2. **Web Tier**
    - Azure Function App: "clm-ns-durable-function"
@@ -23,7 +18,6 @@ Resources:
    - SQL Database: "sqldb-ns"
    - Storage Account: "ns-storage"
    - Azure Key Vault: "kv-ns"
-   - Private Endpoints for SQL, Storage, Key Vault (inside snet-data)
 
 5. **Monitoring**
    - Log Analytics Workspace: "law-ns"
@@ -32,7 +26,6 @@ Resources:
 Connections:
 - Users → Azure Durable Function
 - Azure Durable Function → Storage Queues → Storage Tables
-- Azure Durable Function → SQL DB and Storage (private endpoints)
 - All apps → Key Vault for secrets
 - All resources → Log Analytics
 

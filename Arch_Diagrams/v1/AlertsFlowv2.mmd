@@ -10,7 +10,7 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 
 %% Main Flow
 
-A[Timer Trigger every 5 minutes]:::step --> B[Get Start DateTime from JourneyAlert table]:::step
+A[Timer Trigger every X minutes]:::step --> B[Get Start DateTime from JourneyAlert table]:::step
 B --> C[Call NetReveal TrueHit API for Alerts since Start DateTime]:::step
 
 %% loop entry after C

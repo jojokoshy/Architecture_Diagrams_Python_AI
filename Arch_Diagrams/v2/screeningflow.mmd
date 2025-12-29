@@ -10,15 +10,13 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph MainFlow [Main Flow]
   direction TB
   A[Receive HTTP input with JourneyID, EntityID, Related Entities]:::step --> B[Respond HTTP Status 200 immediately]:::step
-  B --> C[Decrypt payload using Azure Key Vault keys]:::step
+  B --> C[Decrypt payload using Azure Key Vault keys. Payload contains #123;allEntities#125;]:::step
   C --> D[Store Request payload in database]:::step
-  D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId and call FenX SuperGraph API: Return #123;allEntities#125;]:::step
-  E --> DBSaveSupergraph[Save SuperGraph Request / Response to Database]:::step
-  DBSaveSupergraph --> FenX[Call FenX Association Query API with Entity ID and Journey<br/>  /api/association/root/#123;EntityId#125;/journey/#123;JourneyId#125;/proposedChanges/hierarchy API and get the array of deleted Entities : Return #123;deletedEntities#125;]:::step
+  D --> FenX[Call FenX Association Query API with Entity ID and Journey<br/>  /api/association/root/#123;EntityId#125;/journey/#123;JourneyId#125;/proposedChanges/hierarchy API and get the array of deleted Entities : Return #123;deletedEntities#125;]:::step
   FenX --> DBSaveAssociation[Save FenX Association Request / Response to Database]:::step
-  DBSaveAssociation --> LoopStart((Loop: Entities)):::loop
+  DBSaveAssociation --> LoopStart((Loop: Entities #123;allEntities#125;)):::loop
 
-  subgraph EntitiesLoop [Loop  Entities  #123; All Entities for Journey #125; ]
+  subgraph EntitiesLoop ["Loop  Entities {allEntities}  ( All Entities for Journey  )"]
     direction TB
     LoopStart -->  F{If Current Entity of #123;allEntities#125; is in #123;deletedEntities#125;}:::decision
     G[Query Association API associationquery/api/association/root/#123;entityId#125; with current #123;entityId#125; to find Related EntityIDs]:::step

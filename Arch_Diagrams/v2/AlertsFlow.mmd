@@ -10,41 +10,41 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 
 %% Main Flow
 
-A[Timer Trigger every 5 minutes]:::step --> B[Get Start DateTime from JourneyAlert table]:::step
-B --> C[Call NetReveal TrueHit API for Alerts since Start DateTime]:::step
+A["Timer Trigger every 5 minutes"]:::step --> B["Get Start DateTime from JourneyAlert table"]:::step
+B --> C["Call NetReveal TrueHit API for Alerts since Start DateTime"]:::step
 
 %% loop entry after C
-C --> AlertsLoopStart((Loop: Alerts Array)):::loop
+C --> AlertsLoopStart(("Loop: Alerts Array")):::loop
 
 
 subgraph AlertsLoop [Loop through Alerts]
 	direction LR
-	AlertsLoopStart --> D{Alert Status?}:::decision
-	D -->|Confirmed/Disapproved| E0[Save Retrieved Closed Alerts into PendingJourneyAlerts Database Table]:::step
-	E0 --> E[Query FenX for Journey Info from FenX Journey API]:::step
+	AlertsLoopStart --> D{"Alert Status?"}:::decision
+	D -->|Confirmed/Disapproved| E0["Save Retrieved Closed Alerts into PendingJourneyAlerts Database Table"]:::step
+	E0 --> E["Query FenX for Journey Info from FenX Journey API"]:::step
 	D -->|Reopened| AlertsLoopStart
 
-	E --> F1{Journey Open?}:::decision
-	F1 -->|Yes| F2{At Screening Stage?}:::decision
+	E --> F1{"Journey Open?"}:::decision
+	F1 -->|Yes| F2{"At Screening Stage?"}:::decision
 	F2 -->|Yes| A1:::step
-	F2 -->|No| I[Save Alert to PendingJourneyAlerts]:::step
-	F1 -->| <b>No</b> | A0[Mark the Journey as Ongoing Screening]:::step
+	F2 -->|No| I["Save Alert to PendingJourneyAlerts"]:::step
+	F1 -->| <b>No</b> | A0["Mark the Journey as Ongoing Screening"]:::step
 	A0 --> A1
 	subgraph PendingAlertsFlow [Process Alerts for Ongoing/At Screening Stage Journeys]
 		direction TB
-		A1 --> A2[Query PendingJourneyAlerts DB - Closed Alerts Only]:::step
-		A2 --> A3[Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID]:::step
-		A3 --> AlertCheckCondition{If Hit Count matches Alert Details Count by BatchId}:::decision
-		AlertCheckCondition -->|Yes| A4[Get All BatchIds , JourneyId that fulfill condition]:::step
-		A4 --> LoopStart((Loop: Pending Alerts Grouped by BatchId)):::loop
+		A1 --> A2["Query PendingJourneyAlerts DB - Closed Alerts Only"]:::step
+		A2 --> A3["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+		A3 --> AlertCheckCondition{"If Hit Count matches Alert Details Count by BatchId"}:::decision
+		AlertCheckCondition -->|Yes| A4["Get All BatchIds , JourneyId that fulfill condition"]:::step
+		A4 --> LoopStart(("Loop: Pending Alerts Grouped by BatchId")):::loop
 		%%A2 --> LoopStart((Loop: Pending Alerts)):::loop
 
 		subgraph PendingLoop [Pending Alerts Grouped by BatchId]
 			direction TB
-			LoopStart --> N0[Query Database to Get Alerts by JourneyId, BatchId]:::step
-			N0 --> N1[Update Journey by calling FenX Receptor API Grouped By BatchId]:::step
-			N1 --> N2[Update Alert and continue]:::step
-			N2 --> N3[Mark Pending Alert Closed in DB]:::step
+			LoopStart --> N0["Query Database to Get Alerts by JourneyId, BatchId"]:::step
+			N0 --> N1["Update Journey by calling FenX Receptor API Grouped By BatchId"]:::step
+			N1 --> N2["Update Alert and continue"]:::step
+			N2 --> N3["Mark Pending Alert Closed in DB"]:::step
 			N3 --> LoopStart
 		end
 	end
@@ -55,10 +55,10 @@ end
 %% Legend
 subgraph Legend [Legend]
 	direction LR
-	L2[Decision]:::decision
-	L3[Loop]:::loop	
+	L2["Decision"]:::decision
+	L3["Loop"]:::loop	
 end
 
-AlertsLoop --> BottomAnchor(( ))
-BottomAnchor --> O[Update JourneyAlert table: Job Success]:::footer
+AlertsLoop --> BottomAnchor((" "))
+BottomAnchor --> O["Update JourneyAlert table: Job Success"]:::footer
 class BottomAnchor footer

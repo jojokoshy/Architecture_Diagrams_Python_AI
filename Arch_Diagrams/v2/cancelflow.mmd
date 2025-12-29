@@ -8,35 +8,35 @@ classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph MainFlow [Main Flow]
    direction TB
-  A[Receive HTTP POST due to Cancel Event via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
-  B --> C[Decrypt payload using Azure Key Vault keys]:::step
-  C --> D[Store payload in database]:::step
-  D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step
-  E --> FenX[Call FenX to Fetch <b>Verified Entity/Related Entities</b> ]:::step
-  FenX --> LoopStart((Loop: Entities)):::loop
+  A["Receive HTTP POST due to Cancel Event via Hub API Gateway"]:::step --> B["Respond HTTP Status 200 immediately"]:::step
+  B --> C["Decrypt payload using Azure Key Vault keys"]:::step
+  C --> D["Store payload in database"]:::step
+  D --> E["Create SuperGraph using GraphQL with RequestId, JourneyId"]:::step
+  E --> FenX["Call FenX to Fetch <b>Verified Entity/Related Entities</b> "]:::step
+  FenX --> LoopStart(("Loop: Entities")):::loop
 
   subgraph EntitiesLoop [Loop through Entities]
     direction TB
-    LoopStart --> XMLConvert[Convert SuperGraph JSON to XML with Liquid Templates]:::step
-    XMLConvert --> N[Call NetReveal Screening API for entity i]:::step
-    N --> Q{More entities to process?}:::decision
+    LoopStart --> XMLConvert["Convert SuperGraph JSON to XML with Liquid Templates"]:::step
+    XMLConvert --> N["Call NetReveal Screening API for entity i"]:::step
+    N --> Q{"More entities to process?"}:::decision
     Q -- Yes --> LoopStart
-    Q -- No --> O[Store after all NetReveal calls succeed]:::step
+    Q -- No --> O["Store after all NetReveal calls succeed"]:::step
   end
 
-  O --> P[End process - No response sent back to FenX]:::footer
+  O --> P["End process - No response sent back to FenX"]:::footer
 end
 
 style MainFlow stroke-dasharray: 5 5
 
 %% Decision between main and error blocks
-IfError{if error?}:::decision
+IfError{"if error?"}:::decision
 
 %% Error handling block to the right
 subgraph ErrorHandler [Error handling]
   direction TB
-  EH1[Log Error to Error table]:::step
-  EH2[Call Receptor API with Error details]:::step
+  EH1["Log Error to Error table"]:::step
+  EH2["Call Receptor API with Error details"]:::step
   EH1 --> EH2
 end
 

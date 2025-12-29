@@ -11,18 +11,21 @@ subgraph MainFlow [Main Flow]
   direction TB
   A[Receive HTTP input with JourneyID, EntityID, Related Entities]:::step --> B[Respond HTTP Status 200 immediately]:::step
   B --> C[Decrypt payload using Azure Key Vault keys]:::step
-  C --> D[Store payload in database]:::step
-  D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step
-  E --> FenX[Call FenX Association Query API with Entity ID and Journey<br/>Call the /api/association/root/&#123;EntityId&#125;/journey/&#123;JourneyId&#125;/proposedChanges/hierarchy API and get the array of entities with action type]:::step
-  FenX --> LoopStart((Loop: Entities)):::loop
+  C --> D[Store Request payload in database]:::step
+  D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId and call FenX SuperGraph API: Return #123;allEntities#125;]:::step
+  E --> DBSaveSupergraph[Save SuperGraph Request / Response to Database]:::step
+  DBSaveSupergraph --> FenX[Call FenX Association Query API with Entity ID and Journey<br/>  /api/association/root/#123;EntityId#125;/journey/#123;JourneyId#125;/proposedChanges/hierarchy API and get the array of deleted Entities : Return #123;deletedEntities#125;]:::step
+  FenX --> DBSaveAssociation[Save FenX Association Request / Response to Database]:::step
+  DBSaveAssociation --> LoopStart((Loop: Entities)):::loop
 
-  subgraph EntitiesLoop [Loop through Entities]
+  subgraph EntitiesLoop [Loop  Entities  #123; All Entities for Journey #125; ]
     direction TB
-    LoopStart -->  F{Any returned Entities Marked as InActive in Journey?}:::decision
-    G[Query SuperGraph with Inactive EntityIDs to find Related EntityIDs]:::step
+    LoopStart -->  F{If Current Entity of #123;allEntities#125; is in #123;deletedEntities#125;}:::decision
+    G[Query Association API associationquery/api/association/root/#123;entityId#125; with current #123;entityId#125; to find Related EntityIDs]:::step
     F -- Yes --> G
     F -- No --> L[Get OrgUnit from Azure SQL DB - Branch and Department mapping]:::step
-    G --> H{Check Related Entities: Any related entities found?}:::decision
+    G --> DBSaveAssociationEntity[Save Entity Association Request Response to Database]:::step
+    DBSaveAssociationEntity --> H{Check Related Entities: Check Array Size of of assosication query}:::decision
     H -- No --> Inactive[Mark Entities with Empty Related Entities as InActive]:::step
     H -- Yes --> Active[Mark Entities with Related Entities Array Count >= 1 as Active]:::step
     Inactive --> L

@@ -24,7 +24,7 @@ sequenceDiagram
   DB-->>-CLMAdaptor: Stored
   
   %% Call FenX SuperGraph API
-  Note over CLMAdaptor: Create SuperGraph using GraphQL with RequestId, JourneyId
+  Note over CLMAdaptor: Create SuperGraph using GraphQL with RequestId, JourneyId and EntityId
   CLMAdaptor->>+iHubIn: Call SuperGraph API 
   iHubIn->>+FenX: Forward SuperGraph request
   FenX-->>-iHubIn: Return {allEntities} 

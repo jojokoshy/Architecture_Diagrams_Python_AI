@@ -1,0 +1,95 @@
+%%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  %% Initial request
+  Client->>+CLMAdaptor: HTTP POST with JourneyID, EntityID, Related Entities (encrypted JSON)
+  CLMAdaptor-->>-Client: HTTP 200 OK (immediate response)
+  
+  %% Decrypt payload
+  CLMAdaptor->>+KeyVault: Request decryption key
+  KeyVault-->>-CLMAdaptor: Return key
+  CLMAdaptor->>CLMAdaptor: Decrypt payload using KeyVault key
+  
+  %% Store request
+  CLMAdaptor->>+DB: Store Request payload
+  DB-->>-CLMAdaptor: Stored
+  
+  %% Call FenX SuperGraph API
+  Note over CLMAdaptor: Create SuperGraph using GraphQL with RequestId, JourneyId
+  CLMAdaptor->>+iHubIn: Call SuperGraph API 
+  iHubIn->>+FenX: Forward SuperGraph request
+  FenX-->>-iHubIn: Return {allEntities} 
+  iHubIn-->>-CLMAdaptor: Return {allEntities} 
+  CLMAdaptor->>+DB: Save SuperGraph Request / Response
+  DB-->>-CLMAdaptor: Saved
+  
+  %% Call FenX Association Query API
+    Note over CLMAdaptor: Identify Deleted Entities from SuperGraph
+  CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy 
+  iHubIn->>+FenX: Forward Association Query request
+  FenX-->>-iHubIn: Return {deletedEntities} 
+  iHubIn-->>-CLMAdaptor: Return {deletedEntities} 
+  CLMAdaptor->>+DB: Save FenX Association Request / Response
+  DB-->>-CLMAdaptor: Saved
+  
+  %% Loop through all entities
+  loop For Each Entity in {allEntities}
+    
+    alt Current Entity is in {deletedEntities}
+      Note over CLMAdaptor: Entity marked for deletion - query associations
+      CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{entityId}   
+      iHubIn->>+FenX: Forward Association Query for entity
+      FenX-->>-iHubIn: Return Related EntityIDs 
+      iHubIn-->>-CLMAdaptor: Return Related EntityIDs 
+      CLMAdaptor->>+DB: Save Entity Association Request / Response
+      DB-->>-CLMAdaptor: Saved
+      
+      alt Related Entities Array Count >= 1
+        Note over CLMAdaptor: Mark Entity as Active
+        CLMAdaptor->>CLMAdaptor: Mark as Active
+      else Empty Related Entities
+        Note over CLMAdaptor: Mark Entity as InActive
+        CLMAdaptor->>CLMAdaptor: Mark as InActive
+      end
+    else Current Entity is not deleted
+      Note over CLMAdaptor: Normal entity processing
+    end
+    
+    %% Get OrgUnit mapping
+    CLMAdaptor->>+DB: Get OrgUnit from Azure SQL DB - Branch and Department mapping
+    DB-->>-CLMAdaptor: Return OrgUnit mapping
+    
+    %% Call FenX API to get Full Entity Details
+    CLMAdaptor->>+iHubIn: Call FenX API to get Full Entity Details  
+    iHubIn->>+FenX: Forward Entity Details request
+    FenX-->>-iHubIn: Return Full Entity Details  
+    iHubIn-->>-CLMAdaptor: Return Full Entity Details  
+    CLMAdaptor->>+DB: Save Full Entity Details with OrgUnit Mapping and Active/Inactive status
+    DB-->>-CLMAdaptor: Saved
+    
+    %% Prepare to call NetReveal - Convert JSON to XML
+    Note over CLMAdaptor: Convert JSON -> XML for NetReveal
+    CLMAdaptor->>CLMAdaptor: Convert entity data from JSON to XML format
+    
+    %% Call NetReveal Screening API
+    CLMAdaptor->>+iHubOut: Call NetReveal Screening API (XML)
+    iHubOut->>+NetReveal: Forward Screening request (XML)
+    NetReveal-->>-iHubOut: Return AlertId (XML)
+    iHubOut-->>-CLMAdaptor: Return AlertId (XML)
+    
+    %% Save NetReveal response
+    CLMAdaptor->>+DB: Save NetReveal AlertId against entity
+    DB-->>-CLMAdaptor: Saved
+    
+  end
+  
+  Note over CLMAdaptor: End process - No response sent back to FenX

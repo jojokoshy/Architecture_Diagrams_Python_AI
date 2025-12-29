@@ -59,18 +59,33 @@ participant NetReveal
 - **Data formats & security:**
 	- **FenX format:** Calls to `FenX` use JSON. When results from `NetReveal` are sent to `FenX`, the first step is to convert XML → JSON locally (typically inside `CLM-Adaptor`).
 	- **NetReveal format:** Calls to `NetReveal` use XML. Before calling `NetReveal`, perform a local JSON → XML conversion.
-	- **Encryption / KeyVault:** Calls to and from `FenX` must be encrypted. Encryption should be performed locally in `CLM-Adaptor` using `KeyVault` to obtain keys/secrets. Calls received from `FenX` must be decrypted (use `KeyVault` as the decrypting actor in the diagram).
-	- **Where to show steps:** Represent conversion and crypto operations explicitly as interactions in the sequence diagrams (for example: `CLM-Adaptor -> CLM-Adaptor: convert XML->JSON`, `CLM-Adaptor -> KeyVault: get key`, `CLM-Adaptor -> FenX: encrypted JSON`). Use clear labels `convert XML->JSON`, `encrypt with KeyVault`, `decrypt with KeyVault`, `convert JSON->XML`.
+	- **Encryption / KeyVault:** 
+		- **ONLY the initial inbound call** from `Client` to `CLM-Adaptor` is encrypted and requires decryption using `KeyVault`.
+		- **Normal API calls** to `FenX` and `NetReveal` during processing do NOT require encryption/decryption.
+		- Show decryption of the initial payload: `CLM-Adaptor -> KeyVault: Request decryption key`, then `CLM-Adaptor -> CLM-Adaptor: Decrypt payload using KeyVault key`.
+		- All subsequent calls to `FenX` (via `iHubIn`) and `NetReveal` (via `iHubOut`) are standard unencrypted API calls.
+	- **Where to show steps:** Represent data format conversions explicitly as interactions in the sequence diagrams (for example: `CLM-Adaptor -> CLM-Adaptor: convert XML->JSON`, `CLM-Adaptor -> CLM-Adaptor: convert JSON->XML`). Use clear labels.
 
-- **Example flow (high-level):**
-	- `NetReveal` -> `CLM-Adaptor`: XML result
-	- `CLM-Adaptor`: convert XML -> JSON
-	- `CLM-Adaptor` -> `KeyVault`: retrieve key/secret
-	- `CLM-Adaptor`: encrypt JSON with KeyVault
-	- `CLM-Adaptor` -> `FenX`: send encrypted JSON
-	- `FenX` -> `CLM-Adaptor`: encrypted JSON response
-	- `CLM-Adaptor` -> `KeyVault`: decrypt response
-	- `CLM-Adaptor`: convert JSON -> XML (if forwarding to `NetReveal`)
+- **Example flow patterns:**
+	- **Initial inbound call (encrypted):**
+		- `Client` -> `CLM-Adaptor`: encrypted JSON payload
+		- `CLM-Adaptor` -> `KeyVault`: Request decryption key
+		- `KeyVault` -> `CLM-Adaptor`: Return key
+		- `CLM-Adaptor` -> `CLM-Adaptor`: Decrypt payload using KeyVault key
+	- **Standard FenX call (unencrypted):**
+		- `CLM-Adaptor` -> `iHubIn`: API call (JSON)
+		- `iHubIn` -> `FenX`: Forward request (JSON)
+		- `FenX` -> `iHubIn`: Response (JSON)
+		- `iHubIn` -> `CLM-Adaptor`: Response (JSON)
+	- **NetReveal call with conversion (unencrypted):**
+		- `CLM-Adaptor` -> `CLM-Adaptor`: Convert JSON -> XML
+		- `CLM-Adaptor` -> `iHubOut`: API call (XML)
+		- `iHubOut` -> `NetReveal`: Forward request (XML)
+		- `NetReveal` -> `iHubOut`: Response (XML)
+		- `iHubOut` -> `CLM-Adaptor`: Response (XML)
+	- **If returning NetReveal results to FenX:**
+		- `CLM-Adaptor` -> `CLM-Adaptor`: Convert XML -> JSON
+		- `CLM-Adaptor` -> `iHubIn`: Send to FenX (JSON)
 
 Project-specific conventions & patterns
 - Clusters: use `Cluster(...)` to group VNets, subnets, and tiers. The codebase relies on cluster background colors to visually separate tiers (see `agent.md` color examples).

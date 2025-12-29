@@ -23,14 +23,14 @@ sequenceDiagram
   CLMAdaptor->>+DB: Store Request payload
   DB-->>-CLMAdaptor: Stored
   
-  %% Call FenX SuperGraph API
-  Note over CLMAdaptor: Create SuperGraph using GraphQL with RequestId, JourneyId and EntityId
-  CLMAdaptor->>+iHubIn: Call SuperGraph API 
-  iHubIn->>+FenX: Forward SuperGraph request
-  FenX-->>-iHubIn: Return {allEntities} 
-  iHubIn-->>-CLMAdaptor: Return {allEntities} 
-  CLMAdaptor->>+DB: Save SuperGraph Request / Response
-  DB-->>-CLMAdaptor: Saved
+  %% %% Call FenX SuperGraph API
+  %% Note over CLMAdaptor: Create SuperGraph using GraphQL with RequestId, JourneyId and EntityId
+  %% CLMAdaptor->>+iHubIn: Call SuperGraph API 
+  %% iHubIn->>+FenX: Forward SuperGraph request
+  %% FenX-->>-iHubIn: Return {allEntities} 
+  %% iHubIn-->>-CLMAdaptor: Return {allEntities} 
+  %% CLMAdaptor->>+DB: Save SuperGraph Request / Response
+  %% DB-->>-CLMAdaptor: Saved
   
   %% Call FenX Association Query API
     Note over CLMAdaptor: Identify Deleted Entities from SuperGraph

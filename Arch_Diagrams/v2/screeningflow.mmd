@@ -6,6 +6,12 @@ classDef step fill:#ffffff,stroke:#2b6cb0,color:#0f172a,stroke-width:1px;
 classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
 classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
+subgraph Comments [Comments / Legend]
+  direction LR
+  style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
+  note1["Note: This flow is triggered by Screening Journey Adaptor Calls from FenX via Hub API Gateway. The flow is very similar to Cancel flow except that it uses <b>Current / Draft Entity Data</b> instead of <b>Verified Entities</b> in Cancel Journey.
+  The idea is to build re-usable Durable Activity Functions which will be orchestrated using different Orchestration Functions based on the business flow ( cancel flow, screening flow , approval flow etc)"]:::footer
+end
 
 subgraph MainFlow ["Main Flow"]
   direction TB
@@ -30,8 +36,8 @@ subgraph MainFlow ["Main Flow"]
     Active --> L
     L --> CallEntity["Call FenX API to get Full Entity Details for current {entityId}"]:::step
     CallEntity --> M["Save Full Entity Details to Database with OrgUnit Mapping and Active/Inactive status"]:::step
-    M --> N["Prepare to call NetReveal - Convert To XML Format"]:::step
-    N -->  NRCall["Call NetReveal Screening API for current {entityId}, {journeyId}, {batchId}"]:::step
+    M --> N["Convert JSON to XML with XSLT Transformation"]:::step
+    N -->  NRCall["Call NetReveal Screening API for current {entityId}, {journeyId}"]:::step
     NRCall --> SaveToDB["Save NetReveal AlertId in Database against each entity"]:::step
     SaveToDB --> Q{"More entities to process?"}:::decision
     Q -- Yes --> LoopStart

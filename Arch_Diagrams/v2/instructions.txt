@@ -1,1 +1,3 @@
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\screeningflow.mmd" -o "Arch_Diagrams\diagrams\v2\screeningflow.png" -w 4096
+cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\AlertsFlow.mmd" -o "Arch_Diagrams\diagrams\v2\AlertsFlow.png" -w 4096
+cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\AlertsFlow2.mmd" -o "Arch_Diagrams\diagrams\v2\AlertsFlow2.png" -w 4096

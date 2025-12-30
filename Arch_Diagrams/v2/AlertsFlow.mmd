@@ -11,7 +11,7 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 %% Main Flow
 subgraph MainFlow ["Main Flow"]
   direction TB
-	A["Timer Trigger every X minutes"]:::step --> B["Get {startDatetime} from JourneyAlertDetails table. Last successful run time"]:::step
+	A["Timer Trigger every X minutes"]:::step --> B["Get {startDatetime} from JourneyAlertJob table. Last successful run time"]:::step
 	B --> C["Call NetReveal TrueHit API for Alerts since {startDatetime}, : Returns Array[{alerts}]"]:::step
 	SaveToDB["Store All Retrieved Alerts into JourneyAlertDetails Database Table"]:::step
 	C --> SaveToDB
@@ -51,7 +51,7 @@ subgraph MainFlow ["Main Flow"]
 		I --> AlertsLoopStart
 	end
 	AlertsLoop --> BottomAnchor((" "))
-	BottomAnchor --> O["End Alerts Processing"]:::footer
+	BottomAnchor --> O["Update the Datetime of Last Successful Run in JourneyAlertJob Table"]:::footer
 	class BottomAnchor footer
 end
  

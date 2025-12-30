@@ -28,27 +28,30 @@ subgraph MainFlow [Main Flow]
     %% exit the Loop and finish the Call.
     AlertsLoopStart --> C["Call NetReveal - Customer Get Alerts API - with CustomerID, JourneyStartDateTime, EndDateTime"]:::step
     C --> D{"Alert Status?"}:::decision
-    D -->|Confirmed/Disapproved| E["Save the Alert Details to Database"]:::step
+    D -->|Confirmed/Disapproved| E["Save the Alert Details to JourneyAlertDetails Database Table"]:::step
+    E --> AlertsLoopStart
     D -->|Reopened| AlertsLoopStart
   end
 
-  AlertsLoop --> F1["Read from all unprocessed alerts Filter By EntityID where ScreeningAlertDetails rowcount >= ScreeningAlert rowcount by BatchId"]:::step
-  E -.-> F1
-
-  F1 --> J1["Group all Alerts from ScreeningAlertDetails by BatchId"]:::step
+  AlertsLoop --> F1["Retrieve Only Closed Alerts from JourneyAlertDetails Database Table where {AlertStatus = 'Closed'} and {ProcessingFlag = Null} and EntityId IN {entityIDs}"]:::step
+  F2["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+  F1 --> F2
+  F2 --> J1["Group all Alerts from JourneyAlertDetails by BatchId"]:::step
 
   J1 --> BatchLoopStart(("Loop: For every BatchId")):::loop
 
   subgraph BatchLoop [Loop: For every Unique BatchId]
     direction TB
     BatchLoopStart --> J2["Submit to Receptor API all Alerts with same BatchId with Flag indicating Screening Type"]:::step
-    J2 --> BatchLoopStart
+    J3["Update {ProcessingFlag=Processed} and continue"]:::step
+    J2 --> J3
+    J3 --> BatchLoopStart
   end
 
   BatchLoop --> BottomAnchor((" "))
 
-  BottomAnchor --> N["Change flag of all AlertsIds that were successfully sent to FenX"]:::step
-  N --> O["Update JourneyAlert table: Job Success"]:::footer
+  BottomAnchor -->  O["Update JourneyAlert table: Job Success"]:::footer
+  
 end
 
 style MainFlow stroke-dasharray: 5 5

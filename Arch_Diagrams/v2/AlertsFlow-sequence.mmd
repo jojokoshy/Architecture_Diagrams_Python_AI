@@ -1,0 +1,96 @@
+%%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  %% Timer Trigger
+  Note over CLMAdaptor: Timer Trigger every X minutes
+  
+  %% Get last successful run time
+  CLMAdaptor->>+DB: Get {startDatetime} from JourneyAlert table (Last successful run time)
+  DB-->>-CLMAdaptor: Return {startDatetime}
+  
+  %% Call NetReveal TrueHit API
+  Note over CLMAdaptor: Prepare request for NetReveal TrueHit API
+  CLMAdaptor->>CLMAdaptor: Convert request JSON -> XML format
+  CLMAdaptor->>+iHubOut: Call NetReveal TrueHit API for Alerts since {startDatetime} (XML)
+  iHubOut->>+NetReveal: Forward TrueHit API request (XML)
+  NetReveal-->>-iHubOut: Return Array[{alerts}] (XML)
+  iHubOut-->>-CLMAdaptor: Return Array[{alerts}] (XML)
+  CLMAdaptor->>CLMAdaptor: Convert response XML -> JSON format
+  
+  %% Store alerts in database
+  CLMAdaptor->>+DB: Store All Retrieved Alerts into JourneyAlertDetails Table
+  DB-->>-CLMAdaptor: Stored
+  
+  %% Database checks and updates (can be in a single Stored Procedure)
+  rect rgb(240, 249, 255)
+    Note over CLMAdaptor,DB: All Checks and Updates in DB
+    CLMAdaptor->>+DB: Retrieve Only Closed Alerts where AlertStatus='Closed' and ProcessingFlag=Null
+    DB-->>-DB: Return Closed Alerts
+    
+    DB->>+DB: Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID
+    DB-->>-DB: Return validation result
+    
+    DB->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processing' for Retrieved Closed Alerts by BatchId
+    DB-->>-CLMAdaptor: Return Alerts Grouped by BatchId that need processing
+  end
+  
+  %% Loop through closed alerts grouped by BatchId
+  loop For Each BatchId with Only Closed Alerts
+    
+    %% Query FenX for Journey Info
+    CLMAdaptor->>+iHubIn: Call FenX Journey API to get Journey Info (JSON)
+    iHubIn->>+FenX: Forward Journey API request (JSON)
+    FenX-->>-iHubIn: Return Journey Info (JSON)
+    iHubIn-->>-CLMAdaptor: Return Journey Info (JSON)
+    
+    %% Decision: Journey Open?
+    alt Journey is Open
+      
+      alt Journey at Screening Stage
+        Note over CLMAdaptor: Journey is Open and at Screening Stage
+        
+        %% Update Journey via Receptor API
+        CLMAdaptor->>+iHubIn: Call FenX Receptor API - Update Journey Grouped by BatchId (JSON)
+        iHubIn->>+FenX: Forward Receptor API request (JSON)
+        FenX-->>-iHubIn: Return success (JSON)
+        iHubIn-->>-CLMAdaptor: Return success (JSON)
+        
+        %% Update processing flag
+        CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed'
+        DB-->>-CLMAdaptor: Updated
+        
+      else Journey not at Screening Stage
+        Note over CLMAdaptor: Journey is Open but not at Screening Stage
+        CLMAdaptor->>+DB: Set ProcessingFlag=Null in JourneyAlertDetails Table
+        DB-->>-CLMAdaptor: Updated
+      end
+      
+    else Journey is Closed
+      Note over CLMAdaptor: Mark the Journey as Ongoing Screening
+      
+      %% Update Journey via Receptor API
+      CLMAdaptor->>+iHubIn: Call FenX Receptor API - Update Journey Grouped by BatchId (JSON)
+      iHubIn->>+FenX: Forward Receptor API request (JSON)
+      FenX-->>-iHubIn: Return success (JSON)
+      iHubIn-->>-CLMAdaptor: Return success (JSON)
+      
+      %% Update processing flag
+      CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed'
+      DB-->>-CLMAdaptor: Updated
+      
+    end
+    
+    Note over CLMAdaptor: Pick Next Batch Alert
+    
+  end
+  
+  Note over CLMAdaptor: End Alerts Processing

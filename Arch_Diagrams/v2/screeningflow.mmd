@@ -32,7 +32,7 @@ subgraph MainFlow ["Main Flow"]
     CallEntity --> M["Save Full Entity Details to Database with OrgUnit Mapping and Active/Inactive status"]:::step
     M --> N["Prepare to call NetReveal - Convert To XML Format"]:::step
     N -->  NRCall["Call NetReveal Screening API for current {entityId}, {journeyId}, {batchId}"]:::step
-    NRCall --> SaveToDB["Save NetReveal AlertId against each entity"]:::step
+    NRCall --> SaveToDB["Save NetReveal AlertId in Database against each entity"]:::step
     SaveToDB --> Q{"More entities to process?"}:::decision
     Q -- Yes --> LoopStart
     Q -- No --> Done["Exit For Each Entity Loop"]:::step

@@ -15,23 +15,24 @@ sequenceDiagram
   
   %% Query pending alerts
   CLMAdaptor->>+DB: Query JourneyAlertDetails where AlertStatus='Closed' and ProcessingFlag=Null (Open Alerts Only)
-  DB-->>-CLMAdaptor: Return pending alerts
+  DB-->>-DB: Return pending alerts
   
   %% Check alert counts by BatchId
-  CLMAdaptor->>+DB: Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID
-  DB-->>-CLMAdaptor: Return validation result
-  
-  %% Decision: Alert check condition
-  alt Alert Hit Count matches Alert Details Count
-    Note over CLMAdaptor: Condition fulfilled - proceed with processing
+  DB->>+DB: Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID
+  DB-->>-DB: Return Open Alerts by BatchId result
+  Note over CLMAdaptor: Condition fulfilled - proceed with processing
     
     %% Get BatchIds and JourneyIds
-    CLMAdaptor->>+DB: Get All BatchIds, JourneyId that fulfill condition
-    DB-->>-CLMAdaptor: Return BatchIds and JourneyIds
+    DB->>+DB: Get All BatchIds, JourneyId that fulfill condition
+    DB-->>-DB: Return BatchIds and JourneyIds
+    DB->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processing' for Retrieved Closed Alerts by BatchId
+    DB-->>-CLMAdaptor: Updated and Return BatchId, JourneyId array
+  %% Decision: Alert check condition
+  alt Alert Hit Count matches Alert Details Count
+    
     
     %% Update processing flags
-    CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processing' for Retrieved Closed Alerts by BatchId
-    DB-->>-CLMAdaptor: Updated
+
     
     %% Loop through alerts grouped by BatchId
     loop For Each BatchId with Closed Alerts

@@ -1,0 +1,84 @@
+%%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  %% Timer Trigger
+  Note over CLMAdaptor: Timer Trigger every X minutes - Process Pending Journey Alerts
+  
+  %% Query pending alerts
+  CLMAdaptor->>+DB: Query JourneyAlertDetails where AlertStatus='Closed' and ProcessingFlag=Null (Open Alerts Only)
+  DB-->>-CLMAdaptor: Return pending alerts
+  
+  %% Check alert counts by BatchId
+  CLMAdaptor->>+DB: Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID
+  DB-->>-CLMAdaptor: Return validation result
+  
+  %% Decision: Alert check condition
+  alt Alert Hit Count matches Alert Details Count
+    Note over CLMAdaptor: Condition fulfilled - proceed with processing
+    
+    %% Get BatchIds and JourneyIds
+    CLMAdaptor->>+DB: Get All BatchIds, JourneyId that fulfill condition
+    DB-->>-CLMAdaptor: Return BatchIds and JourneyIds
+    
+    %% Update processing flags
+    CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processing' for Retrieved Closed Alerts by BatchId
+    DB-->>-CLMAdaptor: Updated
+    
+    %% Loop through alerts grouped by BatchId
+    loop For Each BatchId with Closed Alerts
+      
+      %% Query FenX for Journey Info
+      CLMAdaptor->>+iHubIn: Call FenX Journey API /api/journey-instance/{journeyInstanceId} (JSON)
+      iHubIn->>+FenX: Forward Journey API request (JSON)
+      FenX-->>-iHubIn: Return Journey Info (JSON)
+      iHubIn-->>-CLMAdaptor: Return Journey Info (JSON)
+      
+      %% Decision: FenX Journey Open?
+      alt FenX Journey is Open
+        Note over CLMAdaptor: Journey is still Open - cannot process yet
+        
+        %% Reset processing flag for retry
+        CLMAdaptor->>+DB: Set ProcessingFlag=Null in JourneyAlertDetails Table
+        DB-->>-CLMAdaptor: Updated
+        
+        Note over CLMAdaptor: Skip to next BatchId
+        
+      else FenX Journey is Closed
+        Note over CLMAdaptor: Journey is Closed - proceed with update
+        
+        %% Get alerts by JourneyId and BatchId
+        CLMAdaptor->>+DB: Query JourneyAlertDetails to Get Alerts by JourneyId, BatchId
+        DB-->>-CLMAdaptor: Return alerts for batch
+        
+        %% Update Journey via Receptor API
+        CLMAdaptor->>+iHubIn: Call FenX Receptor API /api/receptor - Update Journey Grouped by BatchId (JSON)
+        iHubIn->>+FenX: Forward Receptor API request (JSON)
+        FenX-->>-iHubIn: Return success (JSON)
+        iHubIn-->>-CLMAdaptor: Return success (JSON)
+        
+        %% Update processing flag
+        CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed'
+        DB-->>-CLMAdaptor: Updated
+        
+        %% Mark pending alert closed
+        CLMAdaptor->>+DB: Mark Pending Alert Closed in DB
+        DB-->>-CLMAdaptor: Updated
+        
+      end
+      
+    end
+    
+  else Alert Hit Count does not match
+    Note over CLMAdaptor: Condition not met - skip processing
+  end
+  
+  Note over CLMAdaptor: End Alerts Processing

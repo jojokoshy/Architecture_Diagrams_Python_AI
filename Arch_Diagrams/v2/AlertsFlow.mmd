@@ -10,45 +10,43 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 
 %% Main Flow
 
-A["Timer Trigger every 5 minutes"]:::step --> B["Get Start DateTime from JourneyAlert table"]:::step
-B --> C["Call NetReveal TrueHit API for Alerts since Start DateTime"]:::step
+A["Timer Trigger every X minutes"]:::step --> B["Get {startDatetime} from JourneyAlert table. Last successful run time"]:::step
+B --> C["Call NetReveal TrueHit API for Alerts since {startDatetime}, : Returns Array[{alerts}]"]:::step
+SaveToDB["Store All Retrieved Alerts into JourneyAlertDetails Database Table"]:::step
+C --> SaveToDB
+%% This logic can happen in a Single Stored Procedure call - Shown as multiple steps for Clarity
+subgraph CheckAlertsFlow ["All Checks and Updates in DB "]
+	direction TB
+	RetriveClosedAlerts["Retrieve Only Closed Alerts from JourneyAlertDetails Database Table where {AlertStatus = 'Closed'} and {ProcessingFlag = Null}"]:::step
+	SaveToDB --> RetriveClosedAlerts
+	CheckAllAlertsForBatch["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+	RetriveClosedAlerts --> CheckAllAlertsForBatch
 
+	UpdateAlerts["Update JourneyAlertDetails Table set {ProcessingFlag=Processing} for Retrieved Closed Alerts by BatchId"]:::step
+	CheckAllAlertsForBatch --> UpdateAlerts
+end
 %% loop entry after C
-C --> AlertsLoopStart(("Loop: Alerts Array")):::loop
+UpdateAlerts --> AlertsLoopStart(("Loop: Array - Only Closed {alerts} and All Alerts For a BatchId")):::loop
 
 
-subgraph AlertsLoop [Loop through Alerts]
+subgraph AlertsLoop ["Loop: Array - Only Closed {alerts} and All Alerts For a BatchId"]
 	direction LR
-	AlertsLoopStart --> D{"Alert Status?"}:::decision
-	D -->|Confirmed/Disapproved| E0["Save Retrieved Closed Alerts into PendingJourneyAlerts Database Table"]:::step
-	E0 --> E["Query FenX for Journey Info from FenX Journey API"]:::step
-	D -->|Reopened| AlertsLoopStart
+	AlertsLoopStart --> E["Query FenX for Journey Info from FenX Journey API"]:::step
 
 	E --> F1{"Journey Open?"}:::decision
 	F1 -->|Yes| F2{"At Screening Stage?"}:::decision
 	F2 -->|Yes| A1:::step
-	F2 -->|No| I["Save Alert to PendingJourneyAlerts"]:::step
+	F2 -->|No| I
 	F1 -->| <b>No</b> | A0["Mark the Journey as Ongoing Screening"]:::step
 	A0 --> A1
-	subgraph PendingAlertsFlow [Process Alerts for Ongoing/At Screening Stage Journeys]
-		direction TB
-		A1 --> A2["Query PendingJourneyAlerts DB - Closed Alerts Only"]:::step
-		A2 --> A3["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
-		A3 --> AlertCheckCondition{"If Hit Count matches Alert Details Count by BatchId"}:::decision
-		AlertCheckCondition -->|Yes| A4["Get All BatchIds , JourneyId that fulfill condition"]:::step
-		A4 --> LoopStart(("Loop: Pending Alerts Grouped by BatchId")):::loop
-		%%A2 --> LoopStart((Loop: Pending Alerts)):::loop
-
-		subgraph PendingLoop [Pending Alerts Grouped by BatchId]
-			direction TB
-			LoopStart --> N0["Query Database to Get Alerts by JourneyId, BatchId"]:::step
-			N0 --> N1["Update Journey by calling FenX Receptor API Grouped By BatchId"]:::step
-			N1 --> N2["Update Alert and continue"]:::step
-			N2 --> N3["Mark Pending Alert Closed in DB"]:::step
-			N3 --> LoopStart
-		end
-	end
-
+	A1 --> N1(("Loop: Pending Alerts Grouped by BatchId")):::loop
+	%%A2 --> LoopStart((Loop: Pending Alerts)):::loop
+	N1["Update Journey by calling FenX Receptor API Grouped By BatchId"]:::step
+	N1 --> N2["Update {ProcessingFlag=Processed} and continue"]:::step
+	
+	N2 -->DoneProcessingAlert["Pick Next Batch Alert"]:::step
+	DoneProcessingAlert --> AlertsLoopStart
+	I["Set {ProcessingFlag = Null} in JourneyAlertDetails Table  "]:::step
 	I --> AlertsLoopStart
 end
 

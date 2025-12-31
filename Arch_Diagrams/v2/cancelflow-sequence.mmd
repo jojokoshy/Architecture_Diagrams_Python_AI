@@ -1,0 +1,63 @@
+%%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  %% Initial request (only JourneyId)
+  Client->>+CLMAdaptor: HTTP POST with JourneyID (encrypted JSON)
+  CLMAdaptor-->>-Client: HTTP 200 OK (immediate response)
+  
+  %% Decrypt payload
+  CLMAdaptor->>+KeyVault: Request decryption key
+  KeyVault-->>-CLMAdaptor: Return key
+  CLMAdaptor->>CLMAdaptor: Decrypt payload using KeyVault key
+  
+  %% Store request
+  CLMAdaptor->>+DB: Store Request payload
+  DB-->>-CLMAdaptor: Stored
+  
+  %% Call FenX SuperGraph API to get Verified Entities
+  Note over CLMAdaptor: Create SuperGraph using GraphQL with RequestId, JourneyId to fetch Verified Entities
+  CLMAdaptor->>+iHubIn: Call SuperGraph API to get Verified Entity/Related Entities
+  iHubIn->>+FenX: Forward SuperGraph request
+  FenX-->>-iHubIn: Return {allEntities} (Verified Entities)
+  iHubIn-->>-CLMAdaptor: Return {allEntities} (Verified Entities)
+  CLMAdaptor->>+DB: Save SuperGraph Request / Response
+  DB-->>-CLMAdaptor: Saved
+  
+  %% Loop through all verified entities
+  loop For Each Entity in {allEntities}
+    
+    %% Prepare to call NetReveal - Convert JSON to XML
+    Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
+    CLMAdaptor->>CLMAdaptor: Convert JSON to XML using XSLT Transformation
+    
+    %% Call NetReveal Screening API
+    CLMAdaptor->>+iHubOut: Call NetReveal Screening API (XML) for {entityId}, {journeyId}
+    iHubOut->>+NetReveal: Forward Screening request (XML)
+    NetReveal-->>-iHubOut: Return AlertId (XML)
+    iHubOut-->>-CLMAdaptor: Return AlertId (XML)
+    
+    %% Save NetReveal response
+    CLMAdaptor->>+DB: Save NetReveal AlertId against entity
+    DB-->>-CLMAdaptor: Saved
+    
+  end
+  
+  Note over CLMAdaptor: End process - No response sent back to FenX
+
+alt Error Occurs
+    CLMAdaptor->>+DB: Log Error to Error table
+    DB-->>-CLMAdaptor: Logged
+    CLMAdaptor->>+iHubIn: Call Receptor API with Error details
+    iHubIn->>+FenX: Forward error to Receptor API
+    FenX-->>-iHubIn: Acknowledged
+    iHubIn-->>-CLMAdaptor: Error reported
+end

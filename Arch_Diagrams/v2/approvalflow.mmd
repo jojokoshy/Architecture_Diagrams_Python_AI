@@ -1,5 +1,11 @@
 %%{init: {"theme":"default","themeVariables": {"background":"#ffffff","fontSize":"14"}}}%%
 flowchart LR
+subgraph Comments [Comments / Legend]
+  direction LR
+  style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
+  note1["Note: This flow is triggered by Approval Event and will Only receive JourneyId as input. The flow is very similar to screening flow except that it uses XXX instead of current {entities} in Screening Journey.
+  The idea is to build re-usable Durable Activity Functions which will be orchestrated using different Orchestration Functions based on the business flow ( cancel flow, screening flow , approval flow etc)"]:::footer
+end
 
 %% Shared styles (matching AlertsFlow)
 classDef step fill:#ffffff,stroke:#2b6cb0,color:#0f172a,stroke-width:1px;
@@ -8,7 +14,7 @@ classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph MainFlow [Main Flow]
    direction TB
-  A[Receive HTTP POST due to Cancel Event via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
+  A[Receive HTTP POST due to Approval Event via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
   B --> C[Decrypt payload using Azure Key Vault keys]:::step
   C --> D[Store payload in database]:::step
   D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step
@@ -43,5 +49,6 @@ end
 style ErrorHandler fill:#ffe6e6,stroke:#ff0000,stroke-dasharray: 5 5
 
 %% Connections: only between blocks (not individual nodes)
+Comments ~~~MainFlow
 MainFlow -.-> IfError
 IfError -.-> ErrorHandler

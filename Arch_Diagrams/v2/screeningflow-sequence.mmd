@@ -69,7 +69,7 @@ sequenceDiagram
     DB-->>-CLMAdaptor: Return OrgUnit mapping
     
     %% Call FenX API to get Full Entity Details
-    CLMAdaptor->>+iHubIn: Call FenX API to get Full Entity Details  
+    CLMAdaptor->>+iHubIn: Call FenX API to get Full Entity Details for current {entityId}
     iHubIn->>+FenX: Forward Entity Details request
     FenX-->>-iHubIn: Return Full Entity Details  
     iHubIn-->>-CLMAdaptor: Return Full Entity Details  
@@ -77,8 +77,8 @@ sequenceDiagram
     DB-->>-CLMAdaptor: Saved
     
     %% Prepare to call NetReveal - Convert JSON to XML
-    Note over CLMAdaptor: Convert JSON -> XML for NetReveal
-    CLMAdaptor->>CLMAdaptor: Convert entity data from JSON to XML format
+    Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
+    CLMAdaptor->>CLMAdaptor: Convert JSON to XML using XSLT Transformation
     
     %% Call NetReveal Screening API
     CLMAdaptor->>+iHubOut: Call NetReveal Screening API (XML)
@@ -93,3 +93,11 @@ sequenceDiagram
   end
   
   Note over CLMAdaptor: End process - No response sent back to FenX
+alt Error Occurs
+    CLMAdaptor->>+DB: Log Error to Error table
+    DB-->>-CLMAdaptor: Logged
+    CLMAdaptor->>+iHubIn: Call Receptor API with Error details
+    iHubIn->>+FenX: Forward error to Receptor API
+    FenX-->>-iHubIn: Acknowledged
+    iHubIn-->>-CLMAdaptor: Error reported
+end

@@ -1,0 +1,27 @@
+### Variables
+@tenant_id = 16f51c19-e574-4f4a-a254-3cad39cb7d9a
+@client_id = 097df3f9-e099-4ce1-ba23-a162841f5bb3
+@client_secret = 5G58Q~S3mgwkZYFvdWTwADPtEz5TfDpm1luUzcc7
+
+### Get OAuth Token from Azure Entra (Client Credentials Flow)
+# @name getToken
+POST https://login.microsoftonline.com/{{tenant_id}}/oauth2/v2.0/token
+Content-Type: application/x-www-form-urlencoded
+
+client_id={{client_id}}
+&client_secret={{client_secret}}
+&scope=https://graph.microsoft.com/.default
+&grant_type=client_credentials
+
+###
+
+# Extract and display the token
+@access_token = {{getToken.response.body.access_token}}
+@token_type = {{getToken.response.body.token_type}}
+@expires_in = {{getToken.response.body.expires_in}}
+
+### Display Token Info (View in comments after running getToken)
+# Token Type: {{token_type}}
+# Expires In: {{expires_in}} seconds
+# Access Token: {{access_token}}
+

@@ -1,7 +1,7 @@
 %%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
 sequenceDiagram
   %% Participants left-to-right for readability
-  participant Client
+##  participant Client
   participant iHubIn as "iHub API Mgmt (FenX)"
   participant FenX as "FenX (Source API / SuperGraph)"
   participant CLMAdaptor as "CLM-Adaptor"
@@ -14,7 +14,7 @@ sequenceDiagram
   Note over CLMAdaptor: Timer Trigger every X minutes
   
   %% Get last successful run time
-  CLMAdaptor->>+DB: Get {startDatetime} from JourneyAlert table (Last successful run time)
+  CLMAdaptor->>+DB: Get {startDatetime} from JourneyAlertJob table (Last successful run time)
   DB-->>-CLMAdaptor: Return {startDatetime}
   
   %% Call NetReveal TrueHit API
@@ -90,7 +90,23 @@ sequenceDiagram
     end
     
     Note over CLMAdaptor: Pick Next Batch Alert
-    
+        %% After the loop ends, before error handling
+    Note over CLMAdaptor: End Alerts Processing - Update last successful run time
+    CLMAdaptor->>+DB: Update Datetime of Last Successful Run in JourneyAlertJob Table
+    DB-->>-CLMAdaptor: Updated
   end
   
   Note over CLMAdaptor: End Alerts Processing
+alt Error Occurs
+  CLMAdaptor->>+DB: Log Error to Error table
+  DB-->>-CLMAdaptor: Logged
+  
+  CLMAdaptor->>+DB: Set ProcessingFlag=Null for BatchIds Not Processed in JourneyAlertDetails Table
+  DB-->>-CLMAdaptor: Updated
+  
+  CLMAdaptor->>CLMAdaptor: Convert error details JSON -> XML format (if needed for FenX)
+  CLMAdaptor->>+iHubIn: Call Receptor API with Error details (JSON)
+  iHubIn->>+FenX: Forward error to Receptor API (JSON)
+  FenX-->>-iHubIn: Acknowledged (JSON)
+  iHubIn-->>-CLMAdaptor: Error reported
+end

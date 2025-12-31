@@ -1,7 +1,7 @@
 ### Variables
-@tenant_id = 16f51c19-e574-4f4a-a254-3cad39cb7d9a
-@client_id = 097df3f9-e099-4ce1-ba23-a162841f5bb3
-@client_secret = 5G58Q~S3mgwkZYFvdWTwADPtEz5TfDpm1luUzcc7
+@tenant_id = 
+@client_id = 
+@client_secret = YOUR_CLIENT
 
 ### Get OAuth Token from Azure Entra (Client Credentials Flow)
 # @name getToken

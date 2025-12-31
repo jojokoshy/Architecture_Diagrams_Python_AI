@@ -1,11 +1,9 @@
 %%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
 sequenceDiagram
   %% Participants left-to-right for readability
-##  participant Client
   participant iHubIn as "iHub API Mgmt (FenX)"
   participant FenX as "FenX (Source API / SuperGraph)"
   participant CLMAdaptor as "CLM-Adaptor"
-  participant KeyVault
   participant DB as "Database"
   participant iHubOut as "iHub API Mgmt (NetReveal)"
   participant NetReveal
@@ -70,7 +68,7 @@ sequenceDiagram
         
       else Journey not at Screening Stage
         Note over CLMAdaptor: Journey is Open but not at Screening Stage
-        CLMAdaptor->>+DB: Set ProcessingFlag=Null in JourneyAlertDetails Table
+        CLMAdaptor->>+DB: Set ProcessingFlag=Null for current {BatchId} and {JourneyId} in JourneyAlertDetails Table
         DB-->>-CLMAdaptor: Updated
       end
       
@@ -84,29 +82,30 @@ sequenceDiagram
       iHubIn-->>-CLMAdaptor: Return success (JSON)
       
       %% Update processing flag
-      CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed'
+      CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed' for all Alerts in current {BatchId}, {JourneyId}
       DB-->>-CLMAdaptor: Updated
+      CLMAdaptor->>+CLMAdaptor: Maintain list of successfully processed {JourneyIds}, {BatchIds} for rollback in case of error
       
     end
     
     Note over CLMAdaptor: Pick Next Batch Alert
-        %% After the loop ends, before error handling
-    Note over CLMAdaptor: End Alerts Processing - Update last successful run time
-    CLMAdaptor->>+DB: Update Datetime of Last Successful Run in JourneyAlertJob Table
-    DB-->>-CLMAdaptor: Updated
+    
   end
   
-  Note over CLMAdaptor: End Alerts Processing
-alt Error Occurs
-  CLMAdaptor->>+DB: Log Error to Error table
-  DB-->>-CLMAdaptor: Logged
-  
-  CLMAdaptor->>+DB: Set ProcessingFlag=Null for BatchIds Not Processed in JourneyAlertDetails Table
+  Note over CLMAdaptor: End Alerts Processing - Update last successful run time
+  CLMAdaptor->>+DB: Update Datetime of Last Successful Run in JourneyAlertJob Table
   DB-->>-CLMAdaptor: Updated
-  
-  CLMAdaptor->>CLMAdaptor: Convert error details JSON -> XML format (if needed for FenX)
-  CLMAdaptor->>+iHubIn: Call Receptor API with Error details (JSON)
-  iHubIn->>+FenX: Forward error to Receptor API (JSON)
-  FenX-->>-iHubIn: Acknowledged (JSON)
-  iHubIn-->>-CLMAdaptor: Error reported
-end
+
+  %% Error handling
+  alt Error Occurs
+    CLMAdaptor->>+DB: Log Error to Error table
+    DB-->>-CLMAdaptor: Logged
+    
+    CLMAdaptor->>+DB: Set ProcessingFlag=Null for BatchIds Not Processed in JourneyAlertDetails Table
+    DB-->>-CLMAdaptor: Updated
+    
+    CLMAdaptor->>+iHubIn: Call Receptor API with Error details (JSON)
+    iHubIn->>+FenX: Forward error to Receptor API (JSON)
+    FenX-->>-iHubIn: Acknowledged (JSON)
+    iHubIn-->>-CLMAdaptor: Error reported
+  end

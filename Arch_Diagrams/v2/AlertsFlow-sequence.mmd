@@ -45,7 +45,7 @@ sequenceDiagram
   loop For Each BatchId with Only Closed Alerts
     
     %% Query FenX for Journey Info
-    CLMAdaptor->>+iHubIn: Call FenX Journey API to get Journey Info (JSON)
+    CLMAdaptor->>+iHubIn: Call FenX Journey API to get Journey using SuperGraph (JSON)
     iHubIn->>+FenX: Forward Journey API request (JSON)
     FenX-->>-iHubIn: Return Journey Info (JSON)
     iHubIn-->>-CLMAdaptor: Return Journey Info (JSON)

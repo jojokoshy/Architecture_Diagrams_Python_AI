@@ -38,7 +38,7 @@ subgraph MainFlow ["Main Flow"]
 
 	subgraph AlertsLoop ["Loop: Array - Only Closed {alerts} and All Alerts For a BatchId"]
 		direction LR
-		AlertsLoopStart --> E["Query FenX for Journey Info from FenX Journey API"]:::step
+		AlertsLoopStart --> E["Query FenX for Journey Info from FenX - Using SuperGraph"]:::step
 
 		E --> F1{"Journey Open?"}:::decision
 		F1 -->|Yes| F2{"At Screening Stage?"}:::decision

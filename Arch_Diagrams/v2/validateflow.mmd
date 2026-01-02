@@ -41,7 +41,7 @@ subgraph MainFlow [Main Flow]
 
   O -->|No| Ppre["Convert JSON -> XML locally, Encrypt JSON"]:::step
    %% Call to close the Validation Task in FenX - This API call will close the Validation Task in FenX, need to update TSD.
-  Ppre --> Pcall["CLM-Adaptor calls FenX API to close Validation Task (JourneyId)"]:::step 
+  Ppre --> Pcall["CLM-Adaptor calls FenX API to close Validation Task (JourneyId) - calling - /api/journey-instance/{journeyInstanceId}/task/complete"]:::step 
   Pcall --> Q["FenX closes Validation Task and returns 200 OK (Closed)"]:::step
   Q --> R["CLM-Adaptor records closure"]:::step
 

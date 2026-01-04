@@ -12,16 +12,24 @@ sequenceDiagram
 
   %% Initial request
   Client->>+CLMAdaptor: HTTP POST with JourneyID, EntityID, Related Entities (encrypted JSON)
-  CLMAdaptor-->>-Client: HTTP 200 OK (immediate response)
-  
-  %% Decrypt payload
+
+  %% Decrypt payload (must happen before validation)
   CLMAdaptor->>+KeyVault: Request decryption key
-  KeyVault-->>-CLMAdaptor: Return key
-  CLMAdaptor->>CLMAdaptor: Decrypt payload using KeyVault key
-  
-  %% Store request
-  CLMAdaptor->>+DB: Store Request payload
-  DB-->>-CLMAdaptor: Stored
+  KeyVault-->>CLMAdaptor: Return key
+  CLMAdaptor->>+CLMAdaptor: Decrypt payload using KeyVault key
+
+  %% Validate request schema
+  CLMAdaptor->>+CLMAdaptor: Validate request schema for required fields (JourneyID, EntityID, Related Entities)
+  alt Schema Invalid
+    CLMAdaptor-->>Client: HTTP 400 Bad Request with validation errors
+    %% End processing on validation error
+  else Schema Valid
+    CLMAdaptor-->>Client: HTTP 200 OK (immediate response)
+
+    %% Store request
+    CLMAdaptor->>+DB: Store Request payload
+    DB-->>CLMAdaptor: Stored
+  end
   
   %% %% Call FenX SuperGraph API
   %% Note over CLMAdaptor: Create SuperGraph using GraphQL with RequestId, JourneyId and EntityId
@@ -55,10 +63,10 @@ sequenceDiagram
       
       alt Related Entities Array Count >= 1
         Note over CLMAdaptor: Mark Entity as Active
-        CLMAdaptor->>CLMAdaptor: Mark as Active
+            CLMAdaptor->>+CLMAdaptor: Mark as Active
       else Empty Related Entities
         Note over CLMAdaptor: Mark Entity as InActive
-        CLMAdaptor->>CLMAdaptor: Mark as InActive
+        CLMAdaptor->>+CLMAdaptor: Mark as InActive
       end
     else Current Entity is not deleted
       Note over CLMAdaptor: Normal entity processing
@@ -66,7 +74,7 @@ sequenceDiagram
     
     %% Get OrgUnit mapping
     CLMAdaptor->>+DB: Get OrgUnit from Azure SQL DB - Branch and Department mapping
-    DB-->>-CLMAdaptor: Return OrgUnit mapping
+    DB-->>CLMAdaptor: Return OrgUnit mapping
     
     %% Call FenX API to get Full Entity Details
     CLMAdaptor->>+iHubIn: Call FenX API to get Full Entity Details for current {entityId}
@@ -78,26 +86,26 @@ sequenceDiagram
     
     %% Prepare to call NetReveal - Convert JSON to XML
     Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
-    CLMAdaptor->>CLMAdaptor: Convert JSON to XML using XSLT Transformation
+    CLMAdaptor->>+CLMAdaptor: Convert JSON to XML using XSLT Transformation
     
     %% Call NetReveal Screening API
     CLMAdaptor->>+iHubOut: Call NetReveal Screening API (XML)
     iHubOut->>+NetReveal: Forward Screening request (XML)
-    NetReveal-->>-iHubOut: Return AlertId (XML)
-    iHubOut-->>-CLMAdaptor: Return AlertId (XML)
+    NetReveal-->>iHubOut: Return AlertId (XML)
+    iHubOut-->>CLMAdaptor: Return AlertId (XML)
     
     %% Save NetReveal response
     CLMAdaptor->>+DB: Save NetReveal AlertId against entity
-    DB-->>-CLMAdaptor: Saved
+    DB-->>CLMAdaptor: Saved
     
   end
   
-  Note over CLMAdaptor: End process - No response sent back to FenX
-alt Error Occurs
-    CLMAdaptor->>+DB: Log Error to Error table
-    DB-->>-CLMAdaptor: Logged
-    CLMAdaptor->>+iHubIn: Call Receptor API with Error details
-    iHubIn->>+FenX: Forward error to Receptor API
-    FenX-->>-iHubIn: Acknowledged
-    iHubIn-->>-CLMAdaptor: Error reported
-end
+    Note over CLMAdaptor: End process - No response sent back to FenX
+  alt Error Occurs
+      CLMAdaptor->>+DB: Log Error to Error table
+      DB-->>CLMAdaptor: Logged
+      CLMAdaptor->>+iHubIn: Call Receptor API with Error details
+      iHubIn->>+FenX: Forward error to Receptor API
+      FenX-->>iHubIn: Acknowledged
+      iHubIn-->>CLMAdaptor: Error reported
+  end

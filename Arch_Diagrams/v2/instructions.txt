@@ -11,3 +11,7 @@ cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\approvalflow.mmd" -o 
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\reworkflow.mmd" -o "Arch_Diagrams\diagrams\v2\reworkflow.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\cancelflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\cancelflow-sequence.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\validateflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\validateflow-sequence.png" -w 4096
+
+
+cmd /c for %f in (Arch_Diagrams\v2*.mmd) do npx -y @mermaid-js/mermaid-cli -i "%f" -o "Arch_Diagrams\diagrams\v2%~nf.png" -w 4096
+

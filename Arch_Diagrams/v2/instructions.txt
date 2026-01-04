@@ -1,6 +1,5 @@
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\screeningflow.mmd" -o "Arch_Diagrams\diagrams\v2\screeningflow.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\screeningflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\screeningflow-sequence.png" -w 4096
-cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\screeningflow copy.mmd" -o "Arch_Diagrams\diagrams\v2\screeningflow copy.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\AlertsFlow.mmd" -o "Arch_Diagrams\diagrams\v2\AlertsFlow.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\AlertsFlow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\AlertsFlow-sequence.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\AlertsFlowv2v2.mmd" -o "Arch_Diagrams\diagrams\v2\AlertsFlowv2v2.png" -w 4096
@@ -10,3 +9,5 @@ cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\validateflow.mmd" -o 
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\cancelflow.mmd" -o "Arch_Diagrams\diagrams\v2\cancelflow.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\approvalflow.mmd" -o "Arch_Diagrams\diagrams\v2\approvalflow.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\reworkflow.mmd" -o "Arch_Diagrams\diagrams\v2\reworkflow.png" -w 4096
+cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\cancelflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\cancelflow-sequence.png" -w 4096
+cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\validateflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\validateflow-sequence.png" -w 4096

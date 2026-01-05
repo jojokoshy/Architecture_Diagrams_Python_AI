@@ -10,8 +10,8 @@ subgraph MainFlow ["Process Pending Journey Alerts"]
 	direction TB 
 	A1["Timer Trigger every X minutes"]:::step
 	A1 --> A2["Query JourneyAlertDetails Database Table where {AlertStatus = 'Closed'} and {ProcessingFlag = Null} - Open Alerts Only"]:::step
-	A2 --> A3["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
-	A3 -->AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+	A2 --> AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+	%% A3 -->AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
 	AlertCheckCondition -->|Yes| A4["Get All BatchIds , JourneyId that fulfill condition"]:::step 
 	A4 --> UpdateAlerts["Update JourneyAlertDetails Table set {ProcessingFlag=Processing} for Retrieved Closed Alerts by BatchId"]:::step
 		

@@ -5,13 +5,19 @@ classDef decision fill:#fff7ed,stroke:#d97706,color:#92400e,stroke-width:1px;
 classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 
+subgraph Comments [Comments / Legend]
+  direction LR
+  style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
+  note1["This flow is for processing journey alerts already fetched and stored in the database, but could not be processed due to Journey stage not at Screening Stage during the previous check"]:::footer
+end
+
 %% Pending Alerts Flow
 subgraph MainFlow ["Process Pending Journey Alerts"]
 	direction TB 
 	A1["Timer Trigger every X minutes"]:::step
 	A1 --> A2["Query JourneyAlertDetails Database Table where {AlertStatus = 'Closed'} and {ProcessingFlag = Null} - Open Alerts Only"]:::step
-	A2 --> A3["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
-	A3 -->AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+	A2 --> AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+	%% A3 -->AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
 	AlertCheckCondition -->|Yes| A4["Get All BatchIds , JourneyId that fulfill condition"]:::step 
 	A4 --> UpdateAlerts["Update JourneyAlertDetails Table set {ProcessingFlag=Processing} for Retrieved Closed Alerts by BatchId"]:::step
 		
@@ -52,3 +58,4 @@ end
 style ErrorHandler fill:#ffe6e6,stroke:#ff0000,stroke-dasharray: 5 5
 MainFlow -.-> IfError
 IfError -.-> ErrorHandler
+Comments ~~~MainFlow

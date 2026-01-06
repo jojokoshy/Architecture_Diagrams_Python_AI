@@ -1,0 +1,20 @@
+### POST local ScreeningStart (send array of entityIds)
+POST http://localhost:7075/api/ScreeningStart
+Content-Type: application/json
+
+{
+  "requestId": "d290f1ee-6c54-4b01-90e6-d701748f0851",
+  "batchId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+  "journeyId": "9a1b23c4-5d6e-7f89-0a1b-2c3d4e5f6789",
+  "entityIds": [
+    "A1F0C8C2-7A1E-4C9E-9C1A-11A1A1A10001",
+    "A1F0C8C2-7A1E-4C9E-9C1A-11A1A1A10011",
+    "A1F0C8C2-7A1E-4C9E-9C1A-11A1A1A10012"
+  ],
+  "deletedEntityIds": []
+}
+
+# Notes:
+# - Required fields: requestId, batchId, journeyId, entityIds (array of GUID strings)
+# - If your function expects an encrypted payload, replace the body with the encrypted string.
+# - Endpoint: /api/ScreeningStart (available when Functions host is running locally)

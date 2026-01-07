@@ -19,7 +19,7 @@ subgraph MainFlow ["Main Flow"]
   A --> DecryptMessage["Decrypt payload using Azure Key Vault keys. Payload contains {allEntities}"]:::step
   DecryptMessage --> ValidateRequest["Validate Request payload for required fields JourneyID, EntityID, Related Entities using Json Schema Validation"]:::step
   ValidateRequest --> ValidSchemadecision{"Is Schema Valid?"}:::decision
-  ValidSchemadecision -- Yes --> SendStatus["Respond HTTP Status 200 immediately"]:::step
+  ValidSchemadecision -- Yes --> SendStatus["Respond HTTP Status 202 (Accepted) to client and continue"]:::step
   ValidSchemadecision -- No --> SendError["Respond HTTP Status 400 Bad Request with validation errors and end processing"]:::step
   SendStatus --> D["Store Request payload in database"]:::step
   D --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy API and get the array of deleted Entities : Return {deletedEntities}"]:::step
@@ -38,11 +38,11 @@ subgraph MainFlow ["Main Flow"]
     H -- Yes --> Active["Mark Entities with Related Entities Array Count >= 1 as Active"]:::step
     Inactive --> L
     Active --> L
-    L --> CallEntity["Call FenX API to get Full Entity Details for current {entityId}"]:::step
+    L --> CallEntity["Call FenX API to get Full Entity Details for current / draft {entityId}"]:::step
     CallEntity --> M["Save Full Entity Details to Database with OrgUnit Mapping and Active/Inactive status"]:::step
     M --> N["Convert JSON to XML with XSLT Transformation"]:::step
-    N -->  NRCall["Call NetReveal Screening API for current {entityId}, {journeyId}"]:::step
-    NRCall --> SaveToDB["Save NetReveal AlertId in Database against each entity"]:::step
+    N -->  NRCall["Call NetReveal Screening API for current {entityId}, {journeyId}, {BranchId}"]:::step
+    NRCall --> SaveToDB["Save NetReveal Response AlertId in Database against current entity {entityId}, {JourneyId}, {BatchId}. Only for AlertsID that had a Hit or Match will be returned else No return data"]:::step
     SaveToDB --> Q{"More entities to process?"}:::decision
     Q -- Yes --> LoopStart
     Q -- No --> Done["Exit For Each Entity Loop"]:::step

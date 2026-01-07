@@ -4,7 +4,8 @@ flowchart LR
 subgraph Comments [Comments / Legend]
   direction LR
   style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
-  note1["Note: This flow is triggered by Rework Action ( Exact event to be confirmed ) and will Only receive JourneyId as input. The flow is very similar to screening flow except that it uses <b>Verified Entities</b> instead of current {entities} in Screening Journey.
+  note1["Note: This flow is triggered by Rework Action ( Exact event to be confirmed ) and will Only receive JourneyId as input. The flow is very similar to screening flow and it uses Current Draft {entities} like Screening Journey.
+  In <b> Rework Flow</b> , all the previously screened entities and its adjudicated data is cleared from FenX. For Rework scenario, since the entity data may not have changed when compared to previous flow NetReveal may not re-screen the data and hence to get the data back to Fenx, we need to query NetReveal for the AlertIds already generated.
   The idea is to build re-usable Durable Activity Functions which will be orchestrated using different Orchestration Functions based on the business flow ( cancel flow, screening flow , approval flow etc)"]:::footer
 end
 
@@ -18,14 +19,15 @@ subgraph MainFlow [Main Flow]
   A["Receive HTTP POST with JourneyId due to Cancel Event via Hub API Gateway"]:::step --> B["Respond HTTP Status 200 immediately"]:::step
   B --> C["Decrypt payload using Azure Key Vault keys. Payload contains JourneyId"]:::step
   C --> D["Store Request payload in database"]:::step
-  D --> E["Create SuperGraph using GraphQL with RequestId, JourneyId to Fetch <b>Verified Entity/Related Entities</b>"]:::step
+  D --> E["Create SuperGraph using GraphQL with RequestId, JourneyId to Fetch <b>Draft Entity/Related Entities</b>"]:::step
   E --> LoopStart(("Loop: Entities")):::loop
 
   subgraph EntitiesLoop ["Loop  Entities {allEntities}  ( All Entities for Journey  )"]
     direction TB
     LoopStart --> XMLConvert["Convert JSON to XML with XSLT Transformation"]:::step
     XMLConvert --> N["Call NetReveal Screening API for current {entityId}, {journeyId}"]:::step
-    N --> Q{"More entities to process?"}:::decision
+    N --> NewStep["TODO: <b>New Step: Call NetReveal API to fetch AlertId for the entity </b> ????. The previous screening call to NetReveal may not re-screen the data if the entity data has not changed. Hence, we need to query NetReveal for the AlertIds already generated."]:::step
+    NewStep --> Q{"More entities to process?"}:::decision
     Q -- Yes --> LoopStart
     Q -- No --> O["Save NetReveal AlertId in Database against each entity"]:::step
   end

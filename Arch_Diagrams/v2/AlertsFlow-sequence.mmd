@@ -12,32 +12,36 @@ sequenceDiagram
   Note over CLMAdaptor: Timer Trigger every X minutes
   
   %% Get last successful run time
-  CLMAdaptor->>+DB: Get {startDatetime} from JourneyAlertJob table (Last successful run time)
-  DB-->>-CLMAdaptor: Return {startDatetime}
+  CLMAdaptor->>+DB: Get {CompletedOn} from JourneyAlertJob table (Last successful run time)
+  DB-->>-CLMAdaptor: Return {CompletedOn}
   
   %% Call NetReveal TrueHit API
   Note over CLMAdaptor: Prepare request for NetReveal TrueHit API
   CLMAdaptor->>CLMAdaptor: Convert request JSON -> XML format
-  CLMAdaptor->>+iHubOut: Call NetReveal TrueHit API for Alerts since {startDatetime} (XML)
+  CLMAdaptor->>+iHubOut: Call NetReveal TrueHit API for Alerts since {CompletedOn} (XML)
   iHubOut->>+NetReveal: Forward TrueHit API request (XML)
   NetReveal-->>-iHubOut: Return Array[{alerts}] (XML)
   iHubOut-->>-CLMAdaptor: Return Array[{alerts}] (XML)
   CLMAdaptor->>CLMAdaptor: Convert response XML -> JSON format
   
+  %% Insert new job record
+  CLMAdaptor->>+DB: Insert new record into JourneyAlertJob Table with {StartedOn}=Current Datetime, {BatchProcessingStatus}='Processing'
+  DB-->>-CLMAdaptor: Return {JourneyAlertJobId}
+  
   %% Store alerts in database
-  CLMAdaptor->>+DB: Store All Retrieved Alerts into JourneyAlertDetails Table
+  CLMAdaptor->>+DB: Store All Retrieved Alerts into ScreeningHitDetails Table
   DB-->>-CLMAdaptor: Stored
   
   %% Database checks and updates (can be in a single Stored Procedure)
   rect rgb(240, 249, 255)
     Note over CLMAdaptor,DB: All Checks and Updates in DB
-    CLMAdaptor->>+DB: Retrieve Only Closed Alerts where AlertStatus='Closed' and ProcessingFlag=Null
+    CLMAdaptor->>+DB: Retrieve Only Closed Alerts where AlertStatus='Closed' and AlertProcessingStatus=Null
     DB-->>-DB: Return Closed Alerts
     
-    DB->>+DB: Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID
+    DB->>+DB: Get all Alert BatchId where Alert Hit Count grouped by BatchId (from ScreeningHitDetails) ≥ Alert Details count Grouped by BatchID (from ScreeningHit)
     DB-->>-DB: Return validation result
     
-    DB->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processing' for Retrieved Closed Alerts by BatchId
+    DB->>+DB: Update ScreeningHitDetails set AlertProcessingStatus='Processing' for Retrieved Closed Alerts by BatchId that meet condition
     DB-->>-CLMAdaptor: Return Alerts Grouped by BatchId that need processing
   end
   
@@ -63,12 +67,15 @@ sequenceDiagram
         iHubIn-->>-CLMAdaptor: Return success (JSON)
         
         %% Update processing flag
-        CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed'
+        CLMAdaptor->>+DB: Update ScreeningHitDetails set AlertProcessingStatus='Processed' against {BatchId}
         DB-->>-CLMAdaptor: Updated
+        
+        CLMAdaptor->>+DB: Insert into JourneyAlertJobRunDetails ({BatchId}, {BatchProcessingStatus}, {JourneyAlertJobId})
+        DB-->>-CLMAdaptor: Inserted
         
       else Journey not at Screening Stage
         Note over CLMAdaptor: Journey is Open but not at Screening Stage
-        CLMAdaptor->>+DB: Set ProcessingFlag=Null for current {BatchId} and {JourneyId} in JourneyAlertDetails Table
+        CLMAdaptor->>+DB: Set AlertProcessingStatus=Null for current {BatchId} and {JourneyId} in ScreeningHitDetails Table
         DB-->>-CLMAdaptor: Updated
       end
       
@@ -82,8 +89,12 @@ sequenceDiagram
       iHubIn-->>-CLMAdaptor: Return success (JSON)
       
       %% Update processing flag
-      CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed' for all Alerts in current {BatchId}, {JourneyId}
+      CLMAdaptor->>+DB: Update ScreeningHitDetails set AlertProcessingStatus='Processed' for all Alerts in current {BatchId}, {JourneyId}
       DB-->>-CLMAdaptor: Updated
+      
+      CLMAdaptor->>+DB: Insert into JourneyAlertJobRunDetails ({BatchId}, {BatchProcessingStatus}, {JourneyAlertJobId})
+      DB-->>-CLMAdaptor: Inserted
+      
       CLMAdaptor->>+CLMAdaptor: Maintain list of successfully processed {JourneyIds}, {BatchIds} for rollback in case of error
       
     end
@@ -101,7 +112,7 @@ sequenceDiagram
     CLMAdaptor->>+DB: Log Error to Error table
     DB-->>-CLMAdaptor: Logged
     
-    CLMAdaptor->>+DB: Set ProcessingFlag=Null for BatchIds Not Processed in JourneyAlertDetails Table
+    CLMAdaptor->>+DB: Set AlertProcessingStatus=Null for BatchIds Not Processed in ScreeningHitDetails Table
     DB-->>-CLMAdaptor: Updated
     
     CLMAdaptor->>+iHubIn: Call Receptor API with Error details (JSON)

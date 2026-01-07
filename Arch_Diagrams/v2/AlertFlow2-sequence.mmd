@@ -14,19 +14,24 @@ sequenceDiagram
   Note over CLMAdaptor: Timer Trigger every X minutes - Process Pending Journey Alerts
   
   %% Query pending alerts
-  CLMAdaptor->>+DB: Query JourneyAlertDetails where AlertStatus='Closed' and ProcessingFlag=Null (Open Alerts Only)
+  CLMAdaptor->>+DB: Query ScreeningHitDetails where AlertStatus='Closed' and AlertProcessingStatus=Null (Open Alerts Only)
   DB-->>-DB: Return pending alerts
   
   %% Check alert counts by BatchId
-  DB->>+DB: Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID
-  DB-->>-DB: Return Open Alerts by BatchId result
+  DB->>+DB: Get all Alert BatchId where Alert Hit Count grouped by BatchId (from ScreeningHitDetails) ≥ Alert Details count Grouped by BatchID (from ScreeningHit)
+  DB-->>-DB: Return BatchIds that meet condition
   Note over CLMAdaptor: Condition fulfilled - proceed with processing
     
     %% Get BatchIds and JourneyIds
     DB->>+DB: Get All BatchIds, JourneyId that fulfill condition
     DB-->>-DB: Return BatchIds and JourneyIds
-    DB->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processing' for Retrieved Closed Alerts by BatchId
+    
+    DB->>+DB: Update ScreeningHitDetails set AlertProcessingStatus='Processing' for Retrieved Closed Alerts by BatchId
     DB-->>-CLMAdaptor: Updated and Return BatchId, JourneyId array
+    
+    %% Insert into JourneyAlertJob
+    CLMAdaptor->>+DB: Insert new record into JourneyAlertJob Table ({StartedOn}=Current Datetime, {BatchProcessingStatus}='Processing', {AlertJobType}='DBOpenAlerts')
+    DB-->>-CLMAdaptor: Return {JourneyAlertJobId}
   %% Decision: Alert check condition
   alt Alert Hit Count matches Alert Details Count
     
@@ -48,7 +53,7 @@ sequenceDiagram
         Note over CLMAdaptor: Journey is still Open - cannot process yet
         
         %% Reset processing flag for retry
-        CLMAdaptor->>+DB: Set ProcessingFlag=Null in JourneyAlertDetails Table
+        CLMAdaptor->>+DB: Set AlertProcessingStatus=Null in ScreeningHitDetails Table
         DB-->>-CLMAdaptor: Updated
         
         Note over CLMAdaptor: Skip to next BatchId
@@ -57,7 +62,7 @@ sequenceDiagram
         Note over CLMAdaptor: Journey is Closed - proceed with update
         
         %% Get alerts by JourneyId and BatchId
-        CLMAdaptor->>+DB: Query JourneyAlertDetails to Get Alerts by JourneyId, BatchId
+        CLMAdaptor->>+DB: Query ScreeningHitDetails to Get Alerts by JourneyId, BatchId
         DB-->>-CLMAdaptor: Return alerts for batch
         
         %% Update Journey via Receptor API
@@ -67,8 +72,12 @@ sequenceDiagram
         iHubIn-->>-CLMAdaptor: Return success (JSON)
         
         %% Update processing flag
-        CLMAdaptor->>+DB: Update JourneyAlertDetails set ProcessingFlag='Processed'
+        CLMAdaptor->>+DB: Update ScreeningHitDetails set AlertProcessingStatus='Processed'
         DB-->>-CLMAdaptor: Updated
+        
+        %% Insert into JourneyAlertJobRunDetails
+        CLMAdaptor->>+DB: Insert into JourneyAlertJobRunDetails ({BatchId}, {BatchProcessingStatus}, {JourneyAlertJobId})
+        DB-->>-CLMAdaptor: Inserted
         
         %% Mark pending alert closed
         CLMAdaptor->>+DB: Mark Pending Alert Closed in DB

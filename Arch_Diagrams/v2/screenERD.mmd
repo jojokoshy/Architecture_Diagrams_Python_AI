@@ -84,7 +84,10 @@ erDiagram
     JourneyAlertJob {
         Guid JourneyAlertJobId PK
         string JobStatus
+        %% This will store values to indicate if the alert job is using NetReveal as Alert source or the Database as Alert source ( used for proceessing open alerts)
+        string AlertJobType
         date LastRunOn
+        
     }
     JourneyAlertJobRunDetails {
         Guid ID PK

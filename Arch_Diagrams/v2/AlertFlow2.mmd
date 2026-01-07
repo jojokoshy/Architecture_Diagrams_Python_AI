@@ -20,8 +20,8 @@ subgraph MainFlow ["Process Pending Journey Alerts"]
 	%% A3 -->AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
 	AlertCheckCondition -->|Yes| A4["Get All BatchIds , JourneyId that fulfill condition"]:::step 
 	A4 --> UpdateAlerts["Update ScreeningHitDetails Table set {AlertProcessingStatus=Processing} for Retrieved Closed Alerts by BatchId"]:::step
-		
-	UpdateAlerts --> LoopStart(("Loop: Array - Only Closed {alerts} and All Alerts For a BatchId")):::loop
+	UpdateAlerts --> InsertIntoJobAlertJob["Insert a new record into JourneyAlertJob Table Current Datetime as {StartedOn}, {BatchProcessingStatus=Processing} and {AlertJobType='DBOpenAlerts'} and get {JourneyAlertJobId} to be used later when each BatchId completes"]:::step	
+	InsertIntoJobAlertJob --> LoopStart(("Loop: Array - Only Closed {alerts} and All Alerts For a BatchId")):::loop
 	%%A2 --> LoopStart((Loop: Pending Alerts)):::loop
 
 	subgraph PendingLoop [Pending Alerts Grouped by BatchId]
@@ -33,7 +33,8 @@ subgraph MainFlow ["Process Pending Journey Alerts"]
 		I --> LoopStart
 		N0 --> N1["Update Journey by calling FenX Receptor API Grouped By BatchId /api/receptor"]:::step
 		N1 --> N2["Update {AlertProcessingStatus=Processed} and continue"]:::step
-		N2 --> N3["Mark Pending Alert Closed in DB"]:::step
+		N2 --> JourneyAlertJobRunDetails[" Insert into JourneyAlertJobRunDetails ({BatchId} , {BatchProcessingStatus}, {JourneyAlertJobId}) "]:::step
+		JourneyAlertJobRunDetails --> N3["Mark Pending Alert Closed in DB"]:::step
 		N3 --> LoopStart
 	end
 	PendingLoop --> BottomAnchor((" "))

@@ -17,9 +17,9 @@ end
 %% Main Flow
 subgraph MainFlow ["Main Flow"]
   direction TB
-	A["Timer Trigger every X minutes"]:::step --> B["Get {CompletedOn} from JourneyAlertJob  table for last successful run. "]:::step
+	A["Timer Trigger every X minutes"]:::step --> B["Get {CompletedOn} from JourneyAlertJob where {AlertJobType='NetRevealAlerts'} table for last successful run. "]:::step
 	B --> C["Call NetReveal TrueHit API for Alerts since {CompletedOn} as the startTime for retrieving Alerts, : Returns Array[{alerts}]"]:::step
-	C --> InsertIntoJobAlertJob["Insert a new record into JourneyAlertJob Table Current Datetime as {StartedOn}, {BatchProcessingStatus=Processing} and get {JourneyAlertJobId} to be used later when each BatchId completes"]:::step
+	C --> InsertIntoJobAlertJob["Insert a new record into JourneyAlertJob Table Current Datetime as {StartedOn}, {BatchProcessingStatus=Processing} and {AlertJobType='NetRevealAlerts'} and get {JourneyAlertJobId} to be used later when each BatchId completes"]:::step
 	InsertIntoJobAlertJob --> SaveToDB["Store All Retrieved Alerts into ScreeningHitDetails Database Table"]:::step
 
 	%% This logic can happen in a Single Stored Procedure call - Shown as multiple steps for Clarity

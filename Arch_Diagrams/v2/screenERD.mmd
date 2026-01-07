@@ -31,7 +31,7 @@ erDiagram
         Guid RelationshipId
         string EntityType
         %% e.g., for a person, this could be 'IND' for individual"
-        string BrandCode 
+        string BranchCode 
         %% BranchCode will be used to Derive OrgCode from a Mapping Table
         string OrgCode FK BrachCodeOrgCodeMapping OrgCode
         string EntityStatus 
@@ -43,7 +43,7 @@ erDiagram
     
     BrachCodeOrgCodeMapping {
         Guid ID PK
-        string BranchCode FK ScreeningEntity BrandCode
+        string BranchCode FK ScreeningEntity BranchCode
         string OrgCode 
         date CreatedOn
         date validFrom

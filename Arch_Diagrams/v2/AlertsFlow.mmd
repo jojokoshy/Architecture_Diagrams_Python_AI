@@ -17,19 +17,20 @@ end
 %% Main Flow
 subgraph MainFlow ["Main Flow"]
   direction TB
-	A["Timer Trigger every X minutes"]:::step --> B["Get {startDatetime} from JourneyAlertJob table. Last successful run time"]:::step
-	B --> C["Call NetReveal TrueHit API for Alerts since {startDatetime}, : Returns Array[{alerts}]"]:::step
-	SaveToDB["Store All Retrieved Alerts into JourneyAlertDetails Database Table"]:::step
-	C --> SaveToDB
+	A["Timer Trigger every X minutes"]:::step --> B["Get {CompletedOn} from JourneyAlertJob  table for last successful run. "]:::step
+	B --> C["Call NetReveal TrueHit API for Alerts since {CompletedOn} as the startTime for retrieving Alerts, : Returns Array[{alerts}]"]:::step
+	C --> InsertIntoJobAlertJob["Insert a new record into JourneyAlertJob Table Current Datetime as {StartedOn}, {BatchProcessingStatus=Processing} and get {JourneyAlertJobId} to be used later when each BatchId completes"]:::step
+	InsertIntoJobAlertJob --> SaveToDB["Store All Retrieved Alerts into ScreeningHitDetails Database Table"]:::step
+
 	%% This logic can happen in a Single Stored Procedure call - Shown as multiple steps for Clarity
 	subgraph CheckAlertsFlow ["All Checks and Updates in DB "]
 		direction TB
-		RetriveClosedAlerts["Retrieve Only Closed Alerts from JourneyAlertDetails Database Table where {AlertStatus = 'Closed'} and {ProcessingFlag = Null}"]:::step
+		RetriveClosedAlerts["Retrieve Only Closed Alerts from ScreeningHitDetails Database Table where {AlertStatus = 'Closed'} and {AlertProcessingStatus = Null}"]:::step
 		SaveToDB --> RetriveClosedAlerts
-		CheckAllAlertsForBatch["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+		CheckAllAlertsForBatch["Get all Alert BatchId where Alert Hit Count grouped by BatchId (from ScreeningHitDetails Table) ≥ Alert Details count Grouped by BatchID (from ScreeningHit Table)"]:::step
 		RetriveClosedAlerts --> CheckAllAlertsForBatch
 
-		UpdateAlerts["Update JourneyAlertDetails Table set {ProcessingFlag=Processing} for Retrieved Closed Alerts by BatchId"]:::step
+		UpdateAlerts["Update ScreeningHitDetails Table set {AlertProcessingStatus=Processing} for Retrieved Closed Alerts by BatchId for the BatchIds that meet above condition"]:::step
 		CheckAllAlertsForBatch --> UpdateAlerts
 	end
 	%% loop entry after C
@@ -48,12 +49,13 @@ subgraph MainFlow ["Main Flow"]
 		A0 --> A1
 		A1 --> N1(("Loop: Pending Alerts Grouped by BatchId")):::loop
 		%%A2 --> LoopStart((Loop: Pending Alerts)):::loop
-		N1["Update Journey by calling FenX Receptor API Grouped By BatchId"]:::step
-		N1 --> N2["Update {ProcessingFlag=Processed} and continue"]:::step
+		N1["Update Journey by calling FenX Receptor API Grouped By BatchId "]:::step
+		N1 --> UpdateScreeningHitDetails["Update {AlertProcessingStatus=Processed} against {BatchId} to ScreeningHitDetails Table "]:::step
+		UpdateScreeningHitDetails --> JourneyAlertJobRunDetails[" Insert into JourneyAlertJobRunDetails ({BatchId} , {BatchProcessingStatus}, {JourneyAlertJobId}) "]:::step
 		
-		N2 -->DoneProcessingAlert["Pick Next Batch Alert"]:::step
+		JourneyAlertJobRunDetails -->DoneProcessingAlert["Pick Next Batch Alert"]:::step
 		DoneProcessingAlert --> AlertsLoopStart
-		I["Set {ProcessingFlag = Null} in JourneyAlertDetails Table  "]:::step
+		I["Set {AlertProcessingStatus = Null} in ScreeningHitDetails Table  "]:::step
 		I --> AlertsLoopStart
 	end
 	AlertsLoop --> BottomAnchor((" "))
@@ -72,7 +74,7 @@ IfError{"if error?"}:::decision
 subgraph ErrorHandler ["Error handling"]
   direction TB
   EH1["Log Error to Error table"]:::step
-  EH2["Set {ProcessingFlag} = Null for BatchIds Not Processed in JourneyAlertDetails Table"]:::step
+  EH2["Set {AlertProcessingStatus} = Null for BatchIds Not Processed in ScreeningHitDetails Table"]:::step
   EH3["Call Receptor API with Error details"]:::step
   
   EH1 --> EH2 --> EH3

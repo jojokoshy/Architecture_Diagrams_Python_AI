@@ -6,7 +6,7 @@ erDiagram
     %%  - Multiplicity notation follows Mermaid ER style: || = one, }o = many/optional.
 
     RequestResponsePayload {
-        int ID PK
+        Guid ID PK
         Guid JourneyId
         Guid ProcessId
         Guid BatchId
@@ -23,16 +23,17 @@ erDiagram
 
     }
     ScreeningEntity {
-        int ID PK
+        Guid ID PK
         Guid BatchId
         Guid JourneyId
         Guid ProcessId
         Guid ScreeningEntityId
-        int RelationshipId
+        Guid RelationshipId
         string EntityType
         %% e.g., for a person, this could be 'IND' for individual"
         string BrandCode 
-        string OrgCode
+        %% BranchCode will be used to Derive OrgCode from a Mapping Table
+        string OrgCode FK BrachCodeOrgCodeMapping OrgCode
         string EntityStatus 
         string EntityDetailsJson
         string ScreeningStage
@@ -40,9 +41,17 @@ erDiagram
         string CreatedBy
     }
     
+    BrachCodeOrgCodeMapping {
+        Guid ID PK
+        string BranchCode FK ScreeningEntity BrandCode
+        string OrgCode 
+        date CreatedOn
+        date validFrom
+        date validTo
+    }
 
     ScreeningHit {
-        int ID PK
+        Guid ID PK
         Guid BatchId
         Guid JourneyId
         Guid ProcessId
@@ -55,7 +64,7 @@ erDiagram
     
 
     ScreeningHitDetails {
-        int ID PK
+        Guid ID PK
         Guid BatchId
         Guid JourneyId
         Guid ScreeningHitId FK ScreeningHit ID
@@ -72,11 +81,23 @@ erDiagram
 
     }
     
-    
+    JourneyAlertJob {
+        Guid JourneyAlertJobId PK
+        string JobStatus
+        date LastRunOn
+    }
+    JourneyAlertJobRunDetails {
+        Guid ID PK
+        Guid JourneyAlertJobId FK JourneyAlertJob JourneyAlertJobId
+        Guid BatchId
+        string BatchProcessingStatus
+        date StartedOn
+        date CompletedOn
+    }
 
     AuditLog {
-        int ID PK
-        int ErrorCode FK ErrorCodes ID
+        Guid ID PK
+        Guid ErrorCode FK ErrorCodes ID
         string APIEndpoint
         string HttpMethod
         string APIName
@@ -107,6 +128,6 @@ erDiagram
     
     ScreeningEntity ||--o{ ScreeningHit : contains
     ScreeningHit ||--|| ScreeningHitDetails : has
-    AuditLog ||--o{ ErrorCodes : references
-RequestResponsePayload ||--o{ ScreeningEntity : "BatchId correlation"
+    AuditLog ||--o{ ErrorCodes : references    JourneyAlertJob ||--o{ JourneyAlertJobRunDetails : "has runs"
+    BrachCodeOrgCodeMapping ||--o{ ScreeningEntity : "maps BrandCode to OrgCode"RequestResponsePayload ||--o{ ScreeningEntity : "BatchId correlation"
 RequestResponsePayload ||--o{ ScreeningHit : "BatchId correlation"

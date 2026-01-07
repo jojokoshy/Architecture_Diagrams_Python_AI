@@ -15,11 +15,11 @@ end
 subgraph MainFlow ["Process Pending Journey Alerts"]
 	direction TB 
 	A1["Timer Trigger every X minutes"]:::step
-	A1 --> A2["Query JourneyAlertDetails Database Table where {AlertStatus = 'Closed'} and {ProcessingFlag = Null} - Open Alerts Only"]:::step
-	A2 --> AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
+	A1 --> A2["Query ScreeningHitDetails Database Table where {AlertStatus = 'Closed'} and {AlertProcessingStatus = Null} - Open Alerts Only"]:::step
+	A2 --> AlertCheckCondition["Get all Alert BatchId where Alert Hit Count grouped by BatchId (from ScreeningHitDetails Table) ≥ Alert Details count Grouped by BatchID (from ScreeningHit Table)"]:::step
 	%% A3 -->AlertCheckCondition["Check Alert Hit Count grouped by BatchId == Alert Details count Grouped by BatchID"]:::step
 	AlertCheckCondition -->|Yes| A4["Get All BatchIds , JourneyId that fulfill condition"]:::step 
-	A4 --> UpdateAlerts["Update JourneyAlertDetails Table set {ProcessingFlag=Processing} for Retrieved Closed Alerts by BatchId"]:::step
+	A4 --> UpdateAlerts["Update ScreeningHitDetails Table set {AlertProcessingStatus=Processing} for Retrieved Closed Alerts by BatchId"]:::step
 		
 	UpdateAlerts --> LoopStart(("Loop: Array - Only Closed {alerts} and All Alerts For a BatchId")):::loop
 	%%A2 --> LoopStart((Loop: Pending Alerts)):::loop
@@ -28,11 +28,11 @@ subgraph MainFlow ["Process Pending Journey Alerts"]
 		direction TB
 		LoopStart --> E2["Query FenX for Journey Info /api/journey-instance/{journeyInstanceId}"]:::step
 		E2 --> M{"FenX Journey Open?"}:::decision
-		M -->|No| N0["Query JourneyAlertDetails Database Table to Get Alerts by JourneyId, BatchId"]:::step
-		M -->|Yes| I["Set {ProcessingFlag = Null} in JourneyAlertDetails Table  "]:::step
+		M -->|No| N0["Query ScreeningHitDetails Database Table to Get Alerts by JourneyId, BatchId"]:::step
+		M -->|Yes| I["Set {AlertProcessingStatus = Null} in ScreeningHitDetails Table  "]:::step
 		I --> LoopStart
 		N0 --> N1["Update Journey by calling FenX Receptor API Grouped By BatchId /api/receptor"]:::step
-		N1 --> N2["Update {ProcessingFlag=Processed} and continue"]:::step
+		N1 --> N2["Update {AlertProcessingStatus=Processed} and continue"]:::step
 		N2 --> N3["Mark Pending Alert Closed in DB"]:::step
 		N3 --> LoopStart
 	end
@@ -49,7 +49,7 @@ IfError{"if error?"}:::decision
 subgraph ErrorHandler ["Error handling"]
   direction TB
   EH1["Log Error to Error table"]:::step
-  EH2["Set {ProcessingFlag} = Null for BatchIds Not Processed in JourneyAlertDetails Table"]:::step
+  EH2["Set {AlertProcessingStatus} = Null for BatchIds Not Processed in ScreeningHitDetails Table"]:::step
   EH3["Call Receptor API with Error details"]:::step
   
   EH1 --> EH2 --> EH3

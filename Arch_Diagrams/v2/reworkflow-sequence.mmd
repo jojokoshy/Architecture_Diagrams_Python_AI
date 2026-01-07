@@ -1,0 +1,142 @@
+%%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  %% Initial request
+  Client->>+CLMAdaptor: HTTP POST with JourneyID, EntityID, Related Entities (encrypted JSON)
+
+  %% Decrypt payload (must happen before validation)
+  CLMAdaptor->>+KeyVault: Request decryption key
+  KeyVault-->>CLMAdaptor: Return key
+  CLMAdaptor->>+CLMAdaptor: Decrypt payload using KeyVault key (contains allEntities)
+
+  %% Validate request schema
+  CLMAdaptor->>+CLMAdaptor: Validate request schema for required fields (JourneyID, EntityID, Related Entities)
+  alt Schema Invalid
+    CLMAdaptor-->>Client: HTTP 400 Bad Request with validation errors
+    %% End processing on validation error
+  else Schema Valid
+    CLMAdaptor-->>Client: HTTP 202 Accepted (immediate response)
+
+    %% Store request
+    CLMAdaptor->>+DB: Store Request payload in RequestResponsePayload table
+    DB-->>CLMAdaptor: Stored
+  end
+  
+  %% Call FenX SuperGraph API
+  Note over CLMAdaptor: Get all Entities for current Journey
+  CLMAdaptor->>+iHubIn: Call SuperGraph API with JourneyId
+  iHubIn->>+FenX: Forward SuperGraph request
+  FenX-->>-iHubIn: Return {allEntities} 
+  iHubIn-->>-CLMAdaptor: Return {allEntities} 
+  CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table
+  DB-->>-CLMAdaptor: Saved
+  
+  %% Call FenX Association Query API
+  Note over CLMAdaptor: Identify Deleted Entities from SuperGraph
+  CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy 
+  iHubIn->>+FenX: Forward Association Query request
+  FenX-->>-iHubIn: Return {deletedEntities} 
+  iHubIn-->>-CLMAdaptor: Return {deletedEntities} 
+  CLMAdaptor->>+DB: Save FenX Association Request / Response to RequestResponsePayload table
+  DB-->>-CLMAdaptor: Saved
+  
+  %% Loop through all entities
+  loop For Each Entity in {allEntities}
+    
+    alt Current Entity is in {deletedEntities}
+      Note over CLMAdaptor: Entity marked for deletion - query associations
+      CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{entityId}   
+      iHubIn->>+FenX: Forward Association Query for entity
+      FenX-->>-iHubIn: Return Related EntityIDs 
+      iHubIn-->>-CLMAdaptor: Return Related EntityIDs 
+      CLMAdaptor->>+DB: Save Entity Association Request / Response to RequestResponsePayload table
+      DB-->>-CLMAdaptor: Saved
+      
+      alt Related Entities Array Count >= 1
+        Note over CLMAdaptor: Mark Entity as Active
+        CLMAdaptor->>+CLMAdaptor: Mark as Active
+      else Empty Related Entities
+        Note over CLMAdaptor: Mark Entity as InActive
+        CLMAdaptor->>+CLMAdaptor: Mark as InActive
+      end
+    else Current Entity is not deleted
+      Note over CLMAdaptor: Normal entity processing
+    end
+    
+    %% Get OrgUnit mapping
+    CLMAdaptor->>+DB: Get OrgUnit from Azure SQL DB - Branch and Department mapping
+    DB-->>CLMAdaptor: Return OrgUnit mapping
+    
+    %% Call FenX API to get Full Entity Details (draft entities for rework)
+    CLMAdaptor->>+iHubIn: Call FenX API to get Full Entity Details for current/draft {entityId}
+    iHubIn->>+FenX: Forward Entity Details request
+    FenX-->>-iHubIn: Return Full Entity Details  
+    iHubIn-->>-CLMAdaptor: Return Full Entity Details  
+    CLMAdaptor->>+DB: Save Full Entity Details to RequestResponsePayload table with OrgUnit Mapping and Active/Inactive status
+    DB-->>-CLMAdaptor: Saved
+    
+    %% Prepare to call NetReveal - Convert JSON to XML
+    Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
+    CLMAdaptor->>+CLMAdaptor: Convert JSON to XML using XSLT Transformation
+    
+    %% Call NetReveal Screening API
+    CLMAdaptor->>+iHubOut: Call NetReveal Screening API for {entityId}, {journeyId}, {BranchId} (XML)
+    iHubOut->>+NetReveal: Forward Screening request (XML)
+    NetReveal-->>iHubOut: Return AlertId and ScreeningStatus (XML)
+    iHubOut-->>CLMAdaptor: Return AlertId and ScreeningStatus (XML)
+    
+    %% Save NetReveal response
+    CLMAdaptor->>+DB: Save NetReveal AlertId to RequestResponsePayload table against {entityId}, {JourneyId}, {BatchId}
+    DB-->>CLMAdaptor: Saved
+    
+    %% Check Alert Screening Status
+    alt Alert has ScreeningStatus (Hit/Match returned)
+      Note over CLMAdaptor: AlertId returned with Hit/Match - save to ScreeningHit table
+      CLMAdaptor->>+DB: Save to ScreeningHit table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}
+      DB-->>-CLMAdaptor: Saved
+    else No ScreeningStatus (NetReveal did not re-screen)
+      Note over CLMAdaptor: NetReveal may not have re-screened - check for previous alerts
+      CLMAdaptor->>+DB: Check ScreeningEntity table for same {JourneyId}, {ProcessId}, {EntityId} with different {BatchId}
+      DB-->>-CLMAdaptor: Return previous journey records
+      
+      alt Previous journey found with different BatchId
+        Note over CLMAdaptor: Get previous alerts from NetReveal using Get Alert By Customer API
+        CLMAdaptor->>+DB: Get earliest currentJourneyStartTime from ScreeningBatch table for {JourneyId}, {ProcessId}, {EntityId}
+        DB-->>-CLMAdaptor: Return currentJourneyStartTime
+        
+        CLMAdaptor->>+iHubOut: Call NetReveal Get Alert By Customer API with {EntityId}, {currentJourneyStartTime} (XML)
+        iHubOut->>+NetReveal: Forward Get Alert By Customer request (XML)
+        NetReveal-->>-iHubOut: Return AlertId from previous screening (XML)
+        iHubOut-->>-CLMAdaptor: Return AlertId (XML)
+        
+        CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId to RequestResponsePayload table against {entityId}, {JourneyId}, {BatchId}
+        DB-->>-CLMAdaptor: Saved
+        
+        CLMAdaptor->>+DB: Save to ScreeningHit table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}
+        DB-->>-CLMAdaptor: Saved
+      else No previous journey found
+        Note over CLMAdaptor: No previous alerts - continue to next entity
+      end
+    end
+    
+  end
+  
+  Note over CLMAdaptor: End process - No response sent back to FenX
+  
+  alt Error Occurs
+    CLMAdaptor->>+DB: Log Error to Error table
+    DB-->>CLMAdaptor: Logged
+    CLMAdaptor->>+iHubIn: Call Receptor API with Error details
+    iHubIn->>+FenX: Forward error to Receptor API
+    FenX-->>iHubIn: Acknowledged
+    iHubIn-->>CLMAdaptor: Error reported
+  end

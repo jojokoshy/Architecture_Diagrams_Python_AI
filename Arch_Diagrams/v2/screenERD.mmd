@@ -56,8 +56,13 @@ erDiagram
         Guid JourneyId
         Guid ProcessId
         Guid ScreeningEntityId FK ScreeningEntity ID
-        int AlertId
-        bool HitNoHit
+        
+        %%% The Screening Flag indicates if the Entity Triggered a Screening - Yes/No from NetReveal - Screening Field.
+        string ScreeningStatus
+        %%% If Screening Flag is Yes then Possible Values are Hit/NoHit as returned from NetReveal - Result Field in the XML
+        string ScreeningResult
+        %%% The AlertId is only returned if Screening is Yes
+        string AlertId
         date CreatedOn
         string CreatedBy
     }
@@ -68,7 +73,7 @@ erDiagram
         Guid BatchId
         Guid JourneyId
         Guid ScreeningHitId FK ScreeningHit ID
-        Guid AlertId FK ScreeningHit AlertId
+        string AlertId FK ScreeningHit AlertId
         Guid ScreeningEntityId FK ScreeningEntity ID
         string EntityType
         string EntityName

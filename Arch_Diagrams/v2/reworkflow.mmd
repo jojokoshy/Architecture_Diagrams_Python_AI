@@ -4,7 +4,7 @@ flowchart LR
 subgraph Comments [Comments / Legend]
   direction LR
   style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
-  note1["Note: This flow is triggered by Rework Action ( Exact event to be confirmed ) and will Only receive JourneyId as input. The flow is very similar to screening flow and it uses Current Draft {entities} like Screening Journey.
+  note1["Note: This flow is triggered by Rework Action ( Exact event to be confirmed ) and will Only receive JourneyId as input. The flow is very similar to screening flow and it uses Current Draft **entities** like Screening Journey.
   In <b> Rework Flow</b> , all the previously screened entities and its adjudicated data is cleared from FenX. For Rework scenario, since the entity data may not have changed when compared to previous flow NetReveal may not re-screen the data and hence to get the data back to Fenx, we need to query NetReveal for the AlertIds already generated.
   The idea is to build re-usable Durable Activity Functions which will be orchestrated using different Orchestration Functions based on the business flow ( cancel flow, screening flow , approval flow etc)"]:::footer
 end
@@ -17,20 +17,24 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph MainFlow ["Main Flow"]
   direction TB
   A["Receive HTTP input with JourneyID, EntityID, Related Entities"]:::step
-  A --> DecryptMessage["Decrypt payload using Azure Key Vault keys. Payload contains {allEntities}"]:::step
+  A --> DecryptMessage["Decrypt payload using Azure Key Vault keys. Payload contains **allEntities**"]:::step
   DecryptMessage --> ValidateRequest["Validate Request payload for required fields JourneyID, EntityID, Related Entities using Json Schema Validation"]:::step
   ValidateRequest --> ValidSchemadecision{"Is Schema Valid?"}:::decision
   ValidSchemadecision -- Yes --> SendStatus["Respond HTTP Status 202 (Accepted) to client and continue"]:::step
   ValidSchemadecision -- No --> SendError["Respond HTTP Status 400 Bad Request with validation errors and end processing"]:::step
   SendStatus --> D["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
-  D --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy API and get the array of deleted Entities : Return {deletedEntities}"]:::step
+  
+  D --> GetEntitiesForCurrentJourney["Call Supergraph API to get all Entities **{allEntities}** for current Journey"]:::step
+  GetEntitiesForCurrentJourney --> SaveEntitiesToDB["Save Supergraph API Response with all Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
+  
+  SaveEntitiesToDB --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **deletedEntities**"]:::step
   FenX --> DBSaveAssociation["Save FenX Association Request / Response to <b>RequestResponsePayload</b> Table in DB"]:::step
-  DBSaveAssociation --> LoopStart(("Loop: Entities {allEntities}")):::loop
+  DBSaveAssociation --> LoopStart(("Loop: Entities **allEntities**")):::loop
 
-  subgraph EntitiesLoop ["Loop  Entities {allEntities}  ( All Entities for Journey  )"]
+  subgraph EntitiesLoop ["Loop  Entities **allEntities**  ( All Entities for Journey  )"]
     direction TB
-    LoopStart -->  F{"If Current Entity of {allEntities} is in {deletedEntities}"}:::decision
-    G["Query Association API associationquery/api/association/root/{entityId} with current {entityId} to find Related EntityIDs"]:::step
+    LoopStart -->  F{"If Current Entity of **allEntities** is in **deletedEntities**"}:::decision
+    G["Query Association API associationquery/api/association/root/**entityId** with current **entityId** to find Related EntityIDs"]:::step
     F -- Yes --> G
     F -- No --> L["Get OrgUnit from Azure SQL DB - Branch and Department mapping"]:::step
     G --> DBSaveAssociationEntity["Save Entity Association Request Response to <b>RequestResponsePayload</b> Table in DB"]:::step
@@ -39,19 +43,19 @@ subgraph MainFlow ["Main Flow"]
     H -- Yes --> Active["Mark Entities with Related Entities Array Count >= 1 as Active"]:::step
     Inactive --> L
     Active --> L
-    L --> CallEntity["Call FenX API to get Full Entity Details for current / draft {entityId}"]:::step
+    L --> CallEntity["Call FenX API to get Full Entity Details for current / draft **entityId**"]:::step
     CallEntity --> M["Save Full Entity Details to <b>RequestResponsePayload</b> Table in DB with OrgUnit Mapping and Active/Inactive status "]:::step
     M --> N["Convert JSON to XML with XSLT Transformation"]:::step
-    N -->  NRCall["Call NetReveal Screening API for current {entityId}, {journeyId}, {BranchId}"]:::step
-    NRCall --> SaveToDB["Save NetReveal Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity {entityId}, {JourneyId}, {BatchId}. Only for AlertsID that had a Hit or Match will be returned else No return data"]:::step
+    N -->  NRCall["Call NetReveal Screening API for current **entityId**, **journeyId**, **BranchId**"]:::step
+    NRCall --> SaveToDB["Save NetReveal Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **entityId**, **JourneyId**, **BatchId**. Only for AlertsID that had a Hit or Match will be returned else No return data"]:::step
     
-    SaveToDB --> CheckAlertScreeningStatus{"Check Alert {ScreeningStatus} Status from NetReveal Response for current {entityId}"}:::decision
-    CheckAlertScreeningStatus -- No --> CheckDatabaseforExistingJourney{"Check ScreeningEntity Table for same <b> {JourneyId}, {ProcessId}, {EntityId}</b> and a different compared to current <b>{BatchId}</b> "}:::decision
-    CheckDatabaseforExistingJourney --same {JourneyId}, {ProcessId} Different {BatchId} --> GetJourneyStartTime["Get earliest {currentJourneyStartTime} from ScreeningBatch Table for current {JourneyId}, {ProcessId}, {EntityId}"]:::step
-    CallNRGetAlertByCustomer["Call NetReveal Get Alert By Customer API using current {EntityId}, {currentJourneyStartTime}"]:::step
+    SaveToDB --> CheckAlertScreeningStatus{"Check Alert **ScreeningStatus** Status from NetReveal Response for current **entityId**"}:::decision
+    CheckAlertScreeningStatus -- No --> CheckDatabaseforExistingJourney{"Check <b>ScreeningEntity</b> Table for same <b>**JourneyId**, **ProcessId**, **EntityId**</b> and a different compared to current <b>**BatchId**</b> "}:::decision
+    CheckDatabaseforExistingJourney --same **JourneyId**, **ProcessId** Different **BatchId** --> GetJourneyStartTime["Get earliest **currentJourneyStartTime** from <b>ScreeningBatch</b> Table for current **JourneyId**, **ProcessId**, **EntityId**"]:::step
+    CallNRGetAlertByCustomer["Call NetReveal Get Alert By Customer API using current **EntityId**, **currentJourneyStartTime**"]:::step
     GetJourneyStartTime --> CallNRGetAlertByCustomer
-    SaveAlertToDB["Save NetReveal Get Alert By Customer API Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity {entityId}, {JourneyId}, {BatchId}"]:::step
-    SaveAlertToDB --> SaveToScreeningHitTable["Save <b>ScreeningHit</b> Table with current {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}"]:::step
+    SaveAlertToDB["Save NetReveal Get Alert By Customer API Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **entityId**, **JourneyId**, **BatchId**"]:::step
+    SaveAlertToDB --> SaveToScreeningHitTable["Save <b>ScreeningHit</b> Table with current **entityId**, **JourneyId**, **BatchId**, **AlertId**, **ScreeningStatus**, **ScreeningResult**"]:::step
     CallNRGetAlertByCustomer --> SaveAlertToDB
     CheckAlertScreeningStatus -- Yes --> Q
     CheckDatabaseforExistingJourney -- No --> Q
@@ -71,7 +75,7 @@ IfError{"if error?"}:::decision
 %% Error handling block to the right
 subgraph ErrorHandler ["Error handling"]
   direction TB
-  EH1["Log Error to Error table"]:::step
+  EH1["Log Error to <b>Error</b> table"]:::step
   EH2["Call Receptor API with Error details"]:::step
   EH1 --> EH2
 end

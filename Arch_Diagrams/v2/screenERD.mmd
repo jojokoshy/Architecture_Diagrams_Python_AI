@@ -14,6 +14,8 @@ erDiagram
         date CreatedOn
         string CreatedBy
         string PayloadType
+         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
+        Guid OrchestrationInstanceId
         %% Notes:
         %% - JourneyId and ProcessId are intentionally duplicated in RequestResponsePayload for query convenience
         %%   (they should match the values in the parent ScreeningBatch row).
@@ -29,6 +31,8 @@ erDiagram
         Guid ProcessId
         Guid ScreeningEntityId
         Guid RelationshipId
+        %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
+        Guid OrchestrationInstanceId
         string EntityType
         %% e.g., for a person, this could be 'IND' for individual"
         string BranchCode 
@@ -56,7 +60,8 @@ erDiagram
         Guid JourneyId
         Guid ProcessId
         Guid ScreeningEntityId FK ScreeningEntity ID
-        
+         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
+        Guid OrchestrationInstanceId
         %%% The Screening Flag indicates if the Entity Triggered a Screening - Yes/No from NetReveal - Screening Field.
         string ScreeningStatus
         %%% If Screening Flag is Yes then Possible Values are Hit/NoHit as returned from NetReveal - Result Field in the XML
@@ -75,6 +80,8 @@ erDiagram
         Guid ScreeningHitId FK ScreeningHit ID
         string AlertId FK ScreeningHit AlertId
         Guid ScreeningEntityId FK ScreeningEntity ID
+         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
+        Guid OrchestrationInstanceId
         string EntityType
         string EntityName
         string MatchType
@@ -97,6 +104,8 @@ erDiagram
     JourneyAlertJobRunDetails {
         Guid ID PK
         Guid JourneyAlertJobId FK JourneyAlertJob JourneyAlertJobId
+         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
+        Guid OrchestrationInstanceId
         Guid BatchId
         string BatchProcessingStatus
         date StartedOn
@@ -106,6 +115,8 @@ erDiagram
     AuditLog {
         Guid ID PK
         Guid ErrorCode FK ErrorCodes ID
+         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
+        Guid OrchestrationInstanceId
         string APIEndpoint
         string HttpMethod
         string APIName

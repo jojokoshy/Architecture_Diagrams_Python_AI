@@ -37,9 +37,9 @@ sequenceDiagram
   iHubIn->>+FenX: Forward SuperGraph request
   FenX-->>-iHubIn: Return {allEntities} 
   iHubIn-->>-CLMAdaptor: Return {allEntities} 
-  CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table
+  CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table (store OrchestrationInstanceId)
   DB-->>-CLMAdaptor: Saved
-  CLMAdaptor->>+DB: Insert {allEntities} into ScreeningEntity table with JourneyId, ProcessId, EntityId, BatchId, BranchCode, EntityStatus
+  CLMAdaptor->>+DB: Insert {allEntities} into ScreeningEntity table with JourneyId, ProcessId, EntityId, BatchId, BranchCode, EntityStatus, OrchestrationInstanceId
   DB-->>-CLMAdaptor: Saved screening entities
   
   %% Call FenX Association Query API
@@ -60,16 +60,16 @@ sequenceDiagram
       iHubIn->>+FenX: Forward Association Query for entity
       FenX-->>-iHubIn: Return Related EntityIDs 
       iHubIn-->>-CLMAdaptor: Return Related EntityIDs 
-      CLMAdaptor->>+DB: Save Entity Association Request / Response to RequestResponsePayload table
+      CLMAdaptor->>+DB: Save Entity Association Request / Response to RequestResponsePayload table (include OrchestrationInstanceId)
       DB-->>-CLMAdaptor: Saved
       
       alt Related Entities Array Count >= 1
         Note over CLMAdaptor: Persist Active entity status with related EntityIDs
-        CLMAdaptor->>+DB: Update ScreeningEntity table with Related Entities Array and Active status
+        CLMAdaptor->>+DB: Update ScreeningEntity table with Related Entities Array and Active status, tracking OrchestrationInstanceId
         DB-->>-CLMAdaptor: Updated Entity record
       else Empty Related Entities
         Note over CLMAdaptor: Persist InActive entity status when no related EntityIDs
-        CLMAdaptor->>+DB: Update ScreeningEntity table with empty Related Entities Array and InActive status
+        CLMAdaptor->>+DB: Update ScreeningEntity table with empty Related Entities Array and InActive status, tracking OrchestrationInstanceId
         DB-->>-CLMAdaptor: Updated Entity record
       end
     else Current Entity is not deleted
@@ -85,10 +85,10 @@ sequenceDiagram
     iHubIn->>+FenX: Forward Entity Details request
     FenX-->>-iHubIn: Return Full Entity Details  
     iHubIn-->>-CLMAdaptor: Return Full Entity Details  
-    CLMAdaptor->>+DB: Save Full Entity Details to RequestResponsePayload table with OrgUnit Mapping and Active/Inactive status
+    CLMAdaptor->>+DB: Save Full Entity Details to RequestResponsePayload table with OrgUnit Mapping and Active/Inactive status (include OrchestrationInstanceId)
     DB-->>-CLMAdaptor: Saved
-    CLMAdaptor->>+DB: Update ScreeningEntity table with Full Entity Details, OrgUnit mapping, and Active/Inactive status
-    DB-->>-CLMAdaptor: ScreeningEntity updated
+  CLMAdaptor->>+DB: Update ScreeningEntity table with Full Entity Details, OrgUnit mapping, and Active/Inactive status (OrchestrationInstanceId tracked)
+  DB-->>-CLMAdaptor: ScreeningEntity updated
     
     %% Prepare to call NetReveal - Convert JSON to XML
     Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
@@ -101,22 +101,22 @@ sequenceDiagram
     iHubOut-->>CLMAdaptor: Return AlertId and ScreeningStatus (XML)
     
     %% Save NetReveal response
-    CLMAdaptor->>+DB: Save NetReveal AlertId to RequestResponsePayload table against {entityId}, {JourneyId}, {BatchId}
+    CLMAdaptor->>+DB: Save NetReveal AlertId to RequestResponsePayload table against {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId)
     DB-->>CLMAdaptor: Saved
     
     %% Check Alert Screening Status
     alt Alert has ScreeningStatus (Hit/Match returned)
       Note over CLMAdaptor: AlertId returned with Hit/Match - save to ScreeningHit table
-      CLMAdaptor->>+DB: Save to ScreeningHit table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}
+      CLMAdaptor->>+DB: Save to ScreeningHit table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}, OrchestrationInstanceId
       DB-->>-CLMAdaptor: Saved
     else No ScreeningStatus (NetReveal did not re-screen)
       Note over CLMAdaptor: NetReveal may not have re-screened - check for previous alerts
-      CLMAdaptor->>+DB: Check ScreeningEntity table for same {JourneyId}, {ProcessId}, {EntityId} with different {BatchId}
+      CLMAdaptor->>+DB: Check ScreeningEntity table for same {JourneyId}, {ProcessId}, {EntityId} with different {BatchId} (using OrchestrationInstanceId)
       DB-->>-CLMAdaptor: Return previous journey records
       
       alt Previous journey found with different BatchId
         Note over CLMAdaptor: Get previous alerts from NetReveal using Get Alert By Customer API
-        CLMAdaptor->>+DB: Get earliest currentJourneyStartTime from ScreeningBatch table for {JourneyId}, {ProcessId}, {EntityId}
+        CLMAdaptor->>+DB: Get earliest currentJourneyStartTime from ScreeningBatch table for {JourneyId}, {ProcessId}, {EntityId} (OrchestrationInstanceId note)
         DB-->>-CLMAdaptor: Return currentJourneyStartTime
         
         CLMAdaptor->>+iHubOut: Call NetReveal Get Alert By Customer API with {EntityId}, {currentJourneyStartTime} (XML)
@@ -124,10 +124,10 @@ sequenceDiagram
         NetReveal-->>-iHubOut: Return AlertId from previous screening (XML)
         iHubOut-->>-CLMAdaptor: Return AlertId (XML)
         
-        CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId to RequestResponsePayload table against {entityId}, {JourneyId}, {BatchId}
+        CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId to RequestResponsePayload table against {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId)
         DB-->>-CLMAdaptor: Saved
         
-        CLMAdaptor->>+DB: Save to ScreeningHit table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}
+        CLMAdaptor->>+DB: Save to ScreeningHit table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}, OrchestrationInstanceId
         DB-->>-CLMAdaptor: Saved
       else No previous journey found
         Note over CLMAdaptor: No previous alerts - continue to next entity
@@ -139,7 +139,7 @@ sequenceDiagram
   Note over CLMAdaptor: End process - No response sent back to FenX
   
   alt Error Occurs
-    CLMAdaptor->>+DB: Log Error to Error table
+    CLMAdaptor->>+DB: Log Error to Error table (correlate OrchestrationInstanceId)
     DB-->>CLMAdaptor: Logged
     CLMAdaptor->>+iHubIn: Call Receptor API with Error details
     iHubIn->>+FenX: Forward error to Receptor API

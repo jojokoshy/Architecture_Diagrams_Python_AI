@@ -9,6 +9,7 @@ cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\validateflow.mmd" -o 
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\cancelflow.mmd" -o "Arch_Diagrams\diagrams\v2\cancelflow.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\approvalflow.mmd" -o "Arch_Diagrams\diagrams\v2\approvalflow.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\reworkflow.mmd" -o "Arch_Diagrams\diagrams\v2\reworkflow.png" -w 4096
+cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\reworkflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\reworkflow-sequence.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\cancelflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\cancelflow-sequence.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\validateflow-sequence.mmd" -o "Arch_Diagrams\diagrams\v2\validateflow-sequence.png" -w 4096
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\screenERD.mmd" -o "Arch_Diagrams\diagrams\v2\screenERD.png" -w 4096

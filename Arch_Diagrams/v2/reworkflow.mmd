@@ -45,14 +45,14 @@ subgraph MainFlow ["Main Flow"]
     Active --> L
     L --> CallEntity["Call FenX API to get Full Entity Details for current / draft **entityId**"]:::step
     CallEntity --> M["Save Full Entity Details to <b>RequestResponsePayload</b> Table in DB with OrgUnit Mapping and Active/Inactive status "]:::step
-    M --> SaveToFullEntitiesToScreeningEntityTable["Save Full Entity Details to <b>ScreeningEntity</b> Table in DB for current **entityId**, **JourneyId**, **BatchId** with OrgUnit Mapping and Active/Inactive status"]:::step
+    M --> SaveToFullEntitiesToScreeningEntityTable["Update Full Entity Details to <b>ScreeningEntity</b> Table in DB for current **entityId**, **JourneyId**, **BatchId** with OrgUnit Mapping and Active/Inactive status"]:::step
     SaveToFullEntitiesToScreeningEntityTable --> N["Convert JSON to XML with XSLT Transformation"]:::step
     N -->  NRCall["Call NetReveal Screening API for current **entityId**, **journeyId**, **BranchId**"]:::step
     NRCall --> SaveToDB["Save NetReveal Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **entityId**, **JourneyId**, **BatchId**. Only for AlertsID that had a Hit or Match will be returned else No return data"]:::step
     
     SaveToDB --> CheckAlertScreeningStatus{"Check Alert **ScreeningStatus** Status from NetReveal Response for current **entityId**"}:::decision
     CheckAlertScreeningStatus -- No --> CheckDatabaseforExistingJourney{"Check <b>ScreeningEntity</b> Table for same <b>**JourneyId**, **ProcessId**, **EntityId**</b> and a different compared to current <b>**BatchId**</b> "}:::decision
-    CheckDatabaseforExistingJourney --same **JourneyId**, **ProcessId** Different **BatchId** --> GetJourneyStartTime["Get earliest **currentJourneyStartTime** from <b>ScreeningBatch</b> Table for current **JourneyId**, **ProcessId**, **EntityId**"]:::step
+    CheckDatabaseforExistingJourney --same **JourneyId**, **ProcessId** Different **BatchId** --> GetJourneyStartTime["Get earliest **currentJourneyStartTime** from <b>ScreeningBatch</b> Table for current **JourneyId**, **ProcessId**, **EntityId** excluding **BatchId**"]:::step
     CallNRGetAlertByCustomer["Call NetReveal Get Alert By Customer API using current **EntityId**, **currentJourneyStartTime**"]:::step
     GetJourneyStartTime --> CallNRGetAlertByCustomer
     SaveAlertToDB["Save NetReveal Get Alert By Customer API Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **entityId**, **JourneyId**, **BatchId**"]:::step

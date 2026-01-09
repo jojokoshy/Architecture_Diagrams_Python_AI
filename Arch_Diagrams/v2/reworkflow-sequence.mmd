@@ -39,6 +39,8 @@ sequenceDiagram
   iHubIn-->>-CLMAdaptor: Return {allEntities} 
   CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table
   DB-->>-CLMAdaptor: Saved
+  CLMAdaptor->>+DB: Insert {allEntities} into ScreeningEntity table with JourneyId, ProcessId, EntityId, BatchId, BranchCode, EntityStatus
+  DB-->>-CLMAdaptor: Saved screening entities
   
   %% Call FenX Association Query API
   Note over CLMAdaptor: Identify Deleted Entities from SuperGraph
@@ -62,11 +64,13 @@ sequenceDiagram
       DB-->>-CLMAdaptor: Saved
       
       alt Related Entities Array Count >= 1
-        Note over CLMAdaptor: Mark Entity as Active
-        CLMAdaptor->>+CLMAdaptor: Mark as Active
+        Note over CLMAdaptor: Persist Active entity status with related EntityIDs
+        CLMAdaptor->>+DB: Update ScreeningEntity table with Related Entities Array and Active status
+        DB-->>-CLMAdaptor: Updated Entity record
       else Empty Related Entities
-        Note over CLMAdaptor: Mark Entity as InActive
-        CLMAdaptor->>+CLMAdaptor: Mark as InActive
+        Note over CLMAdaptor: Persist InActive entity status when no related EntityIDs
+        CLMAdaptor->>+DB: Update ScreeningEntity table with empty Related Entities Array and InActive status
+        DB-->>-CLMAdaptor: Updated Entity record
       end
     else Current Entity is not deleted
       Note over CLMAdaptor: Normal entity processing
@@ -83,6 +87,8 @@ sequenceDiagram
     iHubIn-->>-CLMAdaptor: Return Full Entity Details  
     CLMAdaptor->>+DB: Save Full Entity Details to RequestResponsePayload table with OrgUnit Mapping and Active/Inactive status
     DB-->>-CLMAdaptor: Saved
+    CLMAdaptor->>+DB: Update ScreeningEntity table with Full Entity Details, OrgUnit mapping, and Active/Inactive status
+    DB-->>-CLMAdaptor: ScreeningEntity updated
     
     %% Prepare to call NetReveal - Convert JSON to XML
     Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API

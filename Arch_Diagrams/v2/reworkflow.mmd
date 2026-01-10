@@ -56,7 +56,7 @@ subgraph MainFlow ["Main Flow"]
     CallNRGetAlertByCustomer["Call NetReveal Get Alert By Customer API using current **EntityId**, **currentJourneyStartTime**"]:::step
     GetJourneyStartTime --> CallNRGetAlertByCustomer
     SaveAlertToDB["Save NetReveal Get Alert By Customer API Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **entityId**, **JourneyId**, **BatchId**"]:::step
-    SaveAlertToDB --> SaveToScreeningHitTable["Save <b>ScreeningHit</b> Table with current **entityId**, **JourneyId**, **BatchId**, **AlertId**, **ScreeningStatus**, **ScreeningResult**"]:::step
+    SaveAlertToDB --> SaveToScreeningHitTable["Save <b>ScreeningHitDetails</b> Table with current **entityId**, **JourneyId**, **BatchId**, **AlertId**, **ScreeningStatus**, **ScreeningResult**"]:::step
     CallNRGetAlertByCustomer --> SaveAlertToDB
     CheckAlertScreeningStatus -- Yes --> Q
     CheckDatabaseforExistingJourney -- No --> Q

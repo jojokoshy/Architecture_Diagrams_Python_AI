@@ -127,7 +127,7 @@ sequenceDiagram
         CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId to RequestResponsePayload table against {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId)
         DB-->>-CLMAdaptor: Saved
         
-        CLMAdaptor->>+DB: Save to ScreeningHit table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}, OrchestrationInstanceId
+        CLMAdaptor->>+DB: Save to ScreeningHitDetails table with {entityId}, {JourneyId}, {BatchId}, {AlertId}, {ScreeningStatus}, {ScreeningResult}, {OrchestrationInstanceId}
         DB-->>-CLMAdaptor: Saved
       else No previous journey found
         Note over CLMAdaptor: No previous alerts - continue to next entity

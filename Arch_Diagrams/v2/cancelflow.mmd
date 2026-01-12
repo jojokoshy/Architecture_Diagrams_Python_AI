@@ -20,9 +20,11 @@ subgraph MainFlow [Main Flow]
   C --> D["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
   D --> E["Create SuperGraph using GraphQL with **{RequestId}**, **{JourneyId}** to Fetch <b>Verified Entity and Related Entities</b>"]:::step
   E --> SaveEntitiesToDB["Save Supergraph API Response with all Verified Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
-  SaveEntitiesToDB --> LoopStart(("Loop: Entities")):::loop
-  E --> LoopStart(("Loop: Entities")):::loop
-
+  SaveEntitiesToDB --> SaveEntitiesToScreeningEntityTable["Insert all  Entities (Main and RP) to <b>ScreeningEntity</b> Table in DB with **{JourneyId}**, **{ProcessId}**, **{EntityId}**, **{BatchId}**, **{BranchCode}**, **{EntityStatus}**"]:::step
+  
+  SaveEntitiesToScreeningEntityTable --> LoopStart(("Loop: Entities")):::loop
+  %%E --> LoopStart(("Loop: Entities")):::loop
+  
   subgraph EntitiesLoop ["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]
     direction TB
     LoopStart --> XMLConvert["Convert JSON to XML with XSLT Transformation"]:::step

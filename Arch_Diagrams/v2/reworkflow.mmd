@@ -17,19 +17,20 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph MainFlow ["Main Flow"]
   direction TB
   A["Receive HTTP input with JourneyID, EntityID, Related Entities"]:::step
-  A --> DecryptMessage["Decrypt payload using Azure Key Vault keys. Payload contains **allEntities**"]:::step
-  DecryptMessage --> ValidateRequest["Validate Request payload for required fields JourneyID, EntityID, Related Entities using Json Schema Validation"]:::step
+  A --> DecryptMessage["Decrypt payload using Azure Key Vault keys. Payload contains **{allEntities}**"]:::step
+  DecryptMessage --> ValidateRequest["Validate Request payload for required fields {JourneyId}, {EntityId}, {Related Entities} using Json Schema Validation"]:::step
   ValidateRequest --> ValidSchemadecision{"Is Schema Valid?"}:::decision
   ValidSchemadecision -- Yes --> SendStatus["Respond HTTP Status 202 (Accepted) to client and continue"]:::step
   ValidSchemadecision -- No --> SendError["Respond HTTP Status 400 Bad Request with validation errors and end processing"]:::step
   SendStatus --> D["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
   
-  D --> GetEntitiesForCurrentJourney["Call Supergraph API to get all Entities **{allEntities}** for current Journey, just {entityId},{branchCode}, {EntityStatus}"]:::step
+  D --> GetEntitiesForCurrentJourney["Call Supergraph API to get all Entities **{allEntities}** for current Journey, just **{entityId}**,**{branchCode}**, **{EntityStatus}**"]:::step
   GetEntitiesForCurrentJourney --> SaveEntitiesToDB["Save Supergraph API Response with all Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
-  SaveEntitiesToDB --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
+  SaveEntitiesToDB --> SaveEntitiesToScreeningEntityTable["Insert all  Entities (Main and RP) to <b>ScreeningEntity</b> Table in DB with **{JourneyId}**, **{ProcessId}**, **{EntityId}**, **{BatchId}**, **{BranchCode}**, **{EntityStatus}**"]:::step
+  SaveEntitiesToScreeningEntityTable --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
   
   FenX --> DBSaveAssociation["Save FenX Association Request / Response to <b>RequestResponsePayload</b> Table in DB"]:::step
-  %% ConsiderAllRPSAsDeleted --> DBSaveAssociation
+  
   DBSaveAssociation --> LoopStart(("Loop: Entities **{allEntities}**")):::loop
 
   subgraph EntitiesLoop ["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]
@@ -40,8 +41,8 @@ subgraph MainFlow ["Main Flow"]
     F -- No --> L["Get OrgUnit from Azure SQL DB - Branch and Department mapping"]:::step
     G --> DBSaveAssociationEntity["Save Entity Association Request Response to <b>RequestResponsePayload</b> Table in DB"]:::step
     DBSaveAssociationEntity --> H{"Check Related Entities: Check Array Size of of association query"}:::decision
-    H -- No --> Inactive["Update current {entityId} in <b>ScreeningEntity</b> Table in DB with Empty Related Entities Array as **{EntityStatus}**=InActive"]:::step
-    H -- Yes --> Active["Update current {entityId} in <b>ScreeningEntity</b> Table in DB with Related Entities Array Count >= 1 as **{EntityStatus}**=Active"]:::step
+    H -- No --> Inactive["Update current **{entityId}** in <b>ScreeningEntity</b> Table in DB with Empty Related Entities Array as **{EntityStatus}**=InActive"]:::step
+    H -- Yes --> Active["Update current **{entityId}** in <b>ScreeningEntity</b> Table in DB with Related Entities Array Count >= 1 as **{EntityStatus}**=Active"]:::step
     Inactive --> L
     Active --> L
     L --> CallEntity["Call FenX API to get Full Entity Details for current / draft **{entityId}**"]:::step

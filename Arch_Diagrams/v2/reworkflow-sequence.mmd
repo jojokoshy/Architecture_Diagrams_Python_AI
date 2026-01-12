@@ -30,7 +30,7 @@ sequenceDiagram
     CLMAdaptor->>+DB: Store Request payload in RequestResponsePayload table
     DB-->>CLMAdaptor: Stored
   end
-
+  
   %% Call FenX SuperGraph API
   Note over CLMAdaptor: Get all Entities for current Journey
   CLMAdaptor->>+iHubIn: Call SuperGraph API with JourneyId
@@ -44,20 +44,12 @@ sequenceDiagram
   
   %% Call FenX Association Query API
   Note over CLMAdaptor: Identify Deleted Entities from SuperGraph
-  alt JourneyType is Customer Off-Boarding
-    Note over CLMAdaptor: Mark main entity as Deactivated, consider all RPs deleted
-    CLMAdaptor->>+DB: Update ScreeningEntity table: mark main Entity as InActive (Deactivated)
-    DB-->>-CLMAdaptor: Updated
- %%   CLMAdaptor->>+DB: Save deletedEntities list (consider all RPs deleted) to RequestResponsePayload table
- %%   DB-->>-CLMAdaptor: Saved
-  else Not Customer Off-Boarding
-    CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy 
-    iHubIn->>+FenX: Forward Association Query request
-    FenX-->>-iHubIn: Return {deletedEntities} 
-    iHubIn-->>-CLMAdaptor: Return {deletedEntities} 
-    CLMAdaptor->>+DB: Save FenX Association Request / Response to RequestResponsePayload table
-    DB-->>-CLMAdaptor: Saved
-  end
+  CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy 
+  iHubIn->>+FenX: Forward Association Query request
+  FenX-->>-iHubIn: Return {deletedEntities} 
+  iHubIn-->>-CLMAdaptor: Return {deletedEntities} 
+  CLMAdaptor->>+DB: Save FenX Association Request / Response to RequestResponsePayload table
+  DB-->>-CLMAdaptor: Saved
   
   %% Loop through all entities
   loop For Each Entity in {allEntities}

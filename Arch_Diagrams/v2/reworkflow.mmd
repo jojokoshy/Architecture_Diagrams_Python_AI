@@ -26,14 +26,10 @@ subgraph MainFlow ["Main Flow"]
   
   D --> GetEntitiesForCurrentJourney["Call Supergraph API to get all Entities **{allEntities}** for current Journey, just {entityId},{branchCode}, {EntityStatus}"]:::step
   GetEntitiesForCurrentJourney --> SaveEntitiesToDB["Save Supergraph API Response with all Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
-  SaveEntitiesToDB --> SaveEntitiesToScreeningEntityTable["Insert all  Entities (Main and RP) to <b>ScreeningEntity</b> Table in DB with {JourneyId}, {ProcessId}, {EntityId}, {BatchId}, {BranchCode}, {EntityStatus}"]:::step
-  SaveEntitiesToScreeningEntityTable --> DecisionToCallAssociationAPI{"Is {JourneyType} Customer Off-Boarding?"}:::decision
-  DecisionToCallAssociationAPI -- Yes --> MarkMainEntityAsDelted["Mark Main Entity as Deactivated in <b>ScreeningEntity</b> Table in DB with **{EntityStatus}**=InActive, RP's need more checks below"]:::step
-  MarkMainEntityAsDelted --> ConsiderAllRPSAsDeleted["All RP Entities are considered deleted **{deletedEntities}**. This List will be further evaluated below to check for **{deletedEntities}** having any additional relationships"]:::step
-  DecisionToCallAssociationAPI -- No --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
+  SaveEntitiesToDB --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
   
   FenX --> DBSaveAssociation["Save FenX Association Request / Response to <b>RequestResponsePayload</b> Table in DB"]:::step
-  ConsiderAllRPSAsDeleted --> DBSaveAssociation
+  %% ConsiderAllRPSAsDeleted --> DBSaveAssociation
   DBSaveAssociation --> LoopStart(("Loop: Entities **{allEntities}**")):::loop
 
   subgraph EntitiesLoop ["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]

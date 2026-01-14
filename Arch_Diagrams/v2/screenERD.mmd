@@ -29,7 +29,7 @@ erDiagram
         Guid BatchId
         Guid JourneyId
         Guid ProcessId
-        Guid ScreeningEntityId
+        Guid EntityId
         Guid RelationshipId
         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId
@@ -59,7 +59,7 @@ erDiagram
         Guid BatchId
         Guid JourneyId
         Guid ProcessId
-        Guid ScreeningEntityId FK ScreeningEntity ID
+        Guid EntityId FK ScreeningEntity EntityId
          %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId
         %%% The Screening Flag indicates if the Entity Triggered a Screening - Yes/No from NetReveal - Screening Field.
@@ -79,7 +79,7 @@ erDiagram
         Guid JourneyId
         Guid ScreeningHitId FK ScreeningHit ID
         string AlertId FK ScreeningHit AlertId
-        Guid ScreeningEntityId FK ScreeningEntity ID
+        Guid EntityId FK ScreeningEntity EntityId
          %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId
         string EntityType

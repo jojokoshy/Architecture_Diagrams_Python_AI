@@ -52,17 +52,19 @@ subgraph MainFlow ["Main Flow"]
     N -->  NRCall["Call NetReveal Screening API for current **{entityId}**, **{journeyId}**, **{BranchId}**"]:::step
     NRCall --> SaveToDB["Save NetReveal Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **{entityId}**, **{JourneyId}**, **{BatchId}**. Only for AlertsID that had a Hit or Match will be returned else No return data"]:::step
     
-    SaveToDB --> CheckAlertScreeningStatus{"Check Alert **ScreeningStatus** Status from NetReveal Response for current **{entityId}**"}:::decision
+    SaveToDB --> CheckAlertScreeningStatus{"Check Alert **{ScreeningStatus}** Status from NetReveal Response for current **{entityId}**"}:::decision
     CheckAlertScreeningStatus -- No --> CheckDatabaseforExistingJourney{"Check <b>ScreeningEntity</b> Table for same <b>**{JourneyId}**, **{ProcessId}**, **{EntityId}**</b> and a different compared to current <b>**{BatchId}**</b> "}:::decision
     CheckDatabaseforExistingJourney --same **JourneyId**, **ProcessId** Different **BatchId** --> GetJourneyStartTime["Get earliest **{currentJourneyStartTime}** from <b>ScreeningBatch</b> Table for current **{JourneyId}**, **{ProcessId}**, **{EntityId}** excluding **{BatchId}**"]:::step
     CallNRGetAlertByCustomer["Call NetReveal Get Alert By Customer API using current **{entityId}**, **{currentJourneyStartTime}**"]:::step
     GetJourneyStartTime --> CallNRGetAlertByCustomer
     SaveAlertToDB["Save NetReveal Get Alert By Customer API Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **{entityId}**, **{JourneyId}**, **{BatchId}**"]:::step
-    SaveAlertToDB --> SaveToScreeningHitTable["Save <b>ScreeningHitDetails</b> Table with current **{entityId}**, **{JourneyId}**, **{BatchId}**, **{AlertId}**, **{ScreeningStatus}**, **{ScreeningResult}**"]:::step
+    SaveAlertToDB --> SaveToScreeningHitDetailsTable["Save <b>ScreeningHitDetails</b> Table with current **{entityId}**, **{JourneyId}**, **{BatchId}**, **{AlertId}**, **{ScreeningStatus}**, **{ScreeningResult}**"]:::step
     CallNRGetAlertByCustomer --> SaveAlertToDB
-    CheckAlertScreeningStatus -- Yes --> Q
+    SaveToScreeningHitTable["Save NetReveal Response AlertId in **{ScreeningHit}** Table for current entity **{entityId}, {JourneyId}, {BatchId}, {AlertIds}**. Only AlertsIDs(Could be more than One AlertId per Entity: Sanctioned or Non-Sanctioned Alert) that had a Hit or Match will be returned else No return data"]:::step
+
+    CheckAlertScreeningStatus -- Yes -->  SaveToScreeningHitTable --> Q
     CheckDatabaseforExistingJourney -- No --> Q
-    SaveToScreeningHitTable -->  Q{"More entities to process?"}:::decision
+    SaveToScreeningHitDetailsTable -->  Q{"More entities to process?"}:::decision
     Q -- Yes --> LoopStart
     Q -- No --> Done["Exit For Each Entity Loop"]:::step
   end

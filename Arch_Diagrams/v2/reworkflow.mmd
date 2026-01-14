@@ -34,7 +34,7 @@ subgraph MainFlow ["Main Flow"]
   subgraph EntitiesLoop ["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]
     direction TB
     LoopStart -->  F{"If Current Entity of **{allEntities}** is in **{deletedEntities}**"}:::decision
-    G["Query Association API associationquery/api/association/root/**entityId** with current **{entityId}** to find Related EntityIDs"]:::step
+    G["SuperGraph API to replace Query Association API associationquery/api/association/root/**entityId** with current **{entityId}** to find Related EntityIDs"]:::step
     F -- Yes --> G
     F -- No --> L["Get OrgUnit from Azure SQL DB - Branch and Department mapping"]:::step
     G --> DBSaveAssociationEntity["Save Entity Association Request Response to <b>RequestResponsePayload</b> Table in DB"]:::step

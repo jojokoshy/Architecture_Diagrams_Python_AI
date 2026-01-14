@@ -16,16 +16,15 @@ classDef loop fill:#f0f9ff,stroke:#60a5fa,color:#0f172a,stroke-width:1px;
 classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph MainFlow ["Main Flow"]
   direction TB
-  A["Receive HTTP input with JourneyID, EntityID, Related Entities"]:::step
-  A --> DecryptMessage["Decrypt payload using Azure Key Vault keys. Payload contains **allEntities**"]:::step
+  A["Receive HTTP input with **{JourneyID} {ProcessId} {BatchId}, draft {EntityID},draft {Related Entities}**"]:::step
+  A --> DecryptMessage["Decrypt payload using Azure Key Vault keys. Payload contains **{allEntities}** including Related Entities. Detailed per Entity retrieval happens in the Loop before call to NetReveal "]:::step
   DecryptMessage --> ValidateRequest["Validate Request payload for required fields JourneyID, EntityID, Related Entities using Json Schema Validation"]:::step
   ValidateRequest --> ValidSchemadecision{"Is Schema Valid?"}:::decision
   ValidSchemadecision -- Yes --> SendStatus["Respond HTTP Status 202 (Accepted) to client and continue"]:::step
   ValidSchemadecision -- No --> SendError["Respond HTTP Status 400 Bad Request with validation errors and end processing"]:::step
   SendStatus --> D["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
   
-  D --> GetEntitiesForCurrentJourney["Call Supergraph API to get all Entities **{allEntities}** for current Journey, just {entityId},{branchCode}, {EntityStatus}"]:::step
-  GetEntitiesForCurrentJourney --> SaveEntitiesToDB["Save Supergraph API Response with all Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
+  D  --> SaveEntitiesToDB["Save {allEntities} from Initial API Request with all Entities to <b>ScreeningEntity</b> Table in DB. This call will insert Multiple rows , one per **{entityId}, {JourneyId} {ProcessId}, {BatchId}**"]:::step
   SaveEntitiesToDB --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
   
   FenX --> DBSaveAssociation["Save FenX Association Request / Response to <b>RequestResponsePayload</b> Table in DB"]:::step

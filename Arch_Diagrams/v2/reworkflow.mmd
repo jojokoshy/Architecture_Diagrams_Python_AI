@@ -78,8 +78,8 @@ IfError{"if error?"}:::decision
 %% Error handling block to the right
 subgraph ErrorHandler ["Error handling"]
   direction TB
-  EH1["Log Error to <b>Error</b> table"]:::step
-  EH2["Call Receptor API with Error details"]:::step
+  EH1["Log Error to Application Insights."]:::step
+  EH2["Call Receptor API with Error details with the Schema as **{ScreenOperationError}**"]:::step
   EH1 --> EH2
 end
 

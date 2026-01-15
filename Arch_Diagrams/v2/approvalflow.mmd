@@ -3,7 +3,7 @@ flowchart LR
 subgraph Comments [Comments / Legend]
   direction LR
   style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
-  note1["Note: This flow is triggered by Approval Event and will Only receive JourneyId as input. The flow is very similar to screening flow except that it uses XXX instead of current {entities} in Screening Journey.
+  note1["Note: This flow is triggered by Approval Event and will Only receive JourneyId as input. The flow is very similar to screening flow except that it uses JourneyId in the initial request event instead of current {entities} in Screening Journey. In the Approval Flow , Only the main Entity is processed for Offboarding.
   The idea is to build re-usable Durable Activity Functions which will be orchestrated using different Orchestration Functions based on the business flow ( cancel flow, screening flow , approval flow etc)"]:::footer
 end
 
@@ -15,22 +15,15 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph MainFlow [Main Flow]
    direction TB
   A[Receive HTTP POST due to Approval Event via Hub API Gateway]:::step --> B[Respond HTTP Status 200 immediately]:::step
-  B --> C[Decrypt payload using Azure Key Vault keys]:::step
-  C --> D[Store payload in database]:::step
-  D --> E[Create SuperGraph using GraphQL with RequestId, JourneyId]:::step
-  E --> FenX[Call FenX to Fetch <b>Verified Entity/Related Entities</b> ]:::step
-  FenX --> LoopStart((Loop: Entities)):::loop
+  B --> B0["Indentify the Event Type using the Approval Event payload and Execute the appropriate Durable Function Orchestration"]:::step
+  B0 --> D["Store payload in database in **RequestResponsePayload** Table in DB"]:::step
+  D --> E["Create SuperGraph using GraphQL with **{RequestId}**, **{JourneyId}** and Only Main **{EntityId}**   and the **{customStatus=Offboarding}** for the Journey"]:::step
 
-  subgraph EntitiesLoop [Loop through Entities]
-    direction TB
-    LoopStart --> XMLConvert[Convert SuperGraph JSON to XML with Liquid Templates]:::step
-    XMLConvert --> N[Call NetReveal Screening API for entity i]:::step
-    N --> Q{More entities to process?}:::decision
-    Q -- Yes --> LoopStart
-    Q -- No --> O[Store after all NetReveal calls succeed]:::step
-  end
-
-  O --> P[End process - No response sent back to FenX]:::footer
+  E --> ConvertToXML["Convert the Json to XML for Call to NetReveal."]:::step
+  ConvertToXML --> CallNetReveal["Call NetReveal Screening API with XML payload for Main **{EntityId}** and **{CustomerStatusCode}=INACTIVE** "]:::step
+  CallNetReveal --> SaveNetRevealResponse["Save NetReveal Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **{entityId}**, **{JourneyId}**, **{BatchId}**. "]:::step
+  
+  SaveNetRevealResponse --> P[End process - No response sent back to FenX]:::footer
 end
 
 style MainFlow stroke-dasharray: 5 5
@@ -41,9 +34,8 @@ IfError{if error?}:::decision
 %% Error handling block to the right
 subgraph ErrorHandler [Error handling]
   direction TB
-  EH1[Log Error to Error table]:::step
-  EH2[Call Receptor API with Error details]:::step
-  EH1 --> EH2
+  EH1[Log Error to Error Log. No call to Receptor Since the Journey is completed.]:::step
+  
 end
 
 style ErrorHandler fill:#ffe6e6,stroke:#ff0000,stroke-dasharray: 5 5

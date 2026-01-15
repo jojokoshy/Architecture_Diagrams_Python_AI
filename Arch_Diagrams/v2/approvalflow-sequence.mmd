@@ -1,0 +1,57 @@
+%%{init: {"theme":"default","themeVariables": {"fontSize":"12"}}}%%
+sequenceDiagram
+  %% Participants left-to-right for readability
+  participant Client
+  participant iHubIn as "iHub API Mgmt (FenX)"
+  participant FenX as "FenX (Source API / SuperGraph)"
+  participant CLMAdaptor as "CLM-Adaptor"
+  participant KeyVault
+  participant DB as "Database"
+  participant iHubOut as "iHub API Mgmt (NetReveal)"
+  participant NetReveal
+
+  Note over CLMAdaptor: Approval Flow - Triggered by Approval Event with JourneyId input<br/>Only the main Entity is processed for Offboarding<br/>Uses re-usable Durable Activity Functions orchestrated for approval flow
+
+  %% Initial request
+  Client->>+CLMAdaptor: HTTP POST Approval Event via Hub API Gateway (JSON)
+
+  %% Respond immediately
+  CLMAdaptor-->>Client: HTTP 200 OK (immediate response)
+
+  %% Identify event type and execute orchestration
+  CLMAdaptor->>+CLMAdaptor: Identify Event Type using Approval Event payload
+  CLMAdaptor->>+CLMAdaptor: Execute appropriate Durable Function Orchestration
+
+  %% Store request
+  CLMAdaptor->>+DB: Store payload in RequestResponsePayload table
+  DB-->>-CLMAdaptor: Stored
+
+  %% Call FenX SuperGraph API
+  Note over CLMAdaptor: Create SuperGraph for main Entity with customStatus=Offboarding
+  CLMAdaptor->>+iHubIn: Call SuperGraph API with {RequestId}, {JourneyId}, Main {EntityId}, {customStatus=Offboarding} (JSON)
+  iHubIn->>+FenX: Forward SuperGraph request (JSON)
+  FenX-->>-iHubIn: Return Entity Details (JSON)
+  iHubIn-->>-CLMAdaptor: Return Entity Details (JSON)
+  CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table
+  DB-->>-CLMAdaptor: Saved
+
+  %% Convert JSON to XML for NetReveal
+  Note over CLMAdaptor: Convert JSON to XML for NetReveal Screening API
+  CLMAdaptor->>+CLMAdaptor: Convert JSON to XML using XSLT Transformation
+
+  %% Call NetReveal Screening API
+  CLMAdaptor->>+iHubOut: Call NetReveal Screening API for Main {EntityId}, {JourneyId}, {BatchId} with {CustomerStatusCode=INACTIVE} (XML)
+  iHubOut->>+NetReveal: Forward Screening request (XML)
+  NetReveal-->>-iHubOut: Return AlertId and ScreeningStatus (XML)
+  iHubOut-->>-CLMAdaptor: Return AlertId and ScreeningStatus (XML)
+
+  %% Save NetReveal response
+  CLMAdaptor->>+DB: Save NetReveal Response AlertId in RequestResponsePayload table for {entityId}, {JourneyId}, {BatchId}
+  DB-->>-CLMAdaptor: Saved
+
+  Note over CLMAdaptor: End process - No response sent back to FenX
+
+  alt Error Occurs
+    CLMAdaptor->>+DB: Log Error to Error Log (no call to Receptor since Journey is completed)
+    DB-->>-CLMAdaptor: Logged
+  end

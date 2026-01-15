@@ -42,9 +42,9 @@ sequenceDiagram
     %% Loop through alerts grouped by BatchId
     loop For Each BatchId with Closed Alerts
       
-      %% Query FenX for Journey Info
-      CLMAdaptor->>+iHubIn: Call FenX Journey API /api/journey-instance/{journeyInstanceId} (JSON)
-      iHubIn->>+FenX: Forward Journey API request (JSON)
+      %% Query SuperGraph (FenX) for Journey Info via iHub
+      CLMAdaptor->>+iHubIn: Call iHubIn to reach FenX SuperGraph  {journeyInstanceId} (JSON)
+      iHubIn->>+FenX: Forward SuperGraph Journey API request (JSON)
       FenX-->>-iHubIn: Return Journey Info (JSON)
       iHubIn-->>-CLMAdaptor: Return Journey Info (JSON)
       
@@ -91,4 +91,15 @@ sequenceDiagram
     Note over CLMAdaptor: Condition not met - skip processing
   end
   
+  alt Error Occurs
+    CLMAdaptor->>+DB: Log Error to Error table
+    DB-->>-CLMAdaptor: Logged
+    CLMAdaptor->>+DB: Set AlertProcessingStatus=Null for BatchIds Not Processed in ScreeningHitDetails Table
+    DB-->>-CLMAdaptor: Updated
+    CLMAdaptor->>+iHubIn: Call FenX Receptor API with Error details (JSON)
+    iHubIn->>+FenX: Forward error to Receptor API (JSON)
+    FenX-->>-iHubIn: Acknowledged (JSON)
+    iHubIn-->>-CLMAdaptor: Error reported
+  end
+
   Note over CLMAdaptor: End Alerts Processing

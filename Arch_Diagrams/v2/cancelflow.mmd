@@ -18,7 +18,7 @@ subgraph MainFlow [Main Flow]
   A["Receive HTTP POST with **{JourneyId}** due to Cancel Event via Hub API Gateway"]:::step --> B["Respond HTTP Status 200 immediately"]:::step
   B --> C["Decrypt payload using Azure Key Vault keys. Payload contains JourneyId"]:::step
   C --> D["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
-  D --> E["Create FenX SuperGraph using GraphQL with **{RequestId}**, **{JourneyId}** to Fetch <b>Verified Entity and Related Entities</b>"]:::step
+  D --> E["Create FenX SuperGraph using GraphQL with **{RequestId}**, **{JourneyId}** to Fetch  <b>Verified Entity and Related Entities</b> **{allEntities}**"]:::step
   E --> SaveEntitiesToDB["Save Supergraph API Response with all Verified Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
   SaveEntitiesToDB --> SaveEntitiesToScreeningEntityTable["Insert all  Entities (Main and RP) to <b>ScreeningEntity</b> Table in DB with **{JourneyId}**, **{ProcessId}**, **{EntityId}**, **{BatchId}**, **{BranchCode}**, **{EntityStatus}**"]:::step
   
@@ -27,8 +27,15 @@ subgraph MainFlow [Main Flow]
   
   subgraph EntitiesLoop ["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]
     direction TB
-    LoopStart --> XMLConvert["Convert JSON to XML with XSLT Transformation"]:::step
+    L["Get OrgUnit from Azure SQL DB - Branch and Department mapping"]:::step
+    LoopStart --> L 
+    L --> CallEntity["Call Supergraph FenX API to get Full Entity Details for Verified **{entityId}**"]:::step
+    CallEntity --> SaveEntitiesToDB2["Save Supergraph API Response with all Verified Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
+    SaveToFullEntitiesToScreeningEntityTable["Update Full Entity Details to <b>ScreeningEntity</b> Table in DB for current **{entityId}**, **{JourneyId}**, **{BatchId}** with OrgUnit Mapping"]:::step
+    SaveEntitiesToDB2 --> SaveToFullEntitiesToScreeningEntityTable
+    SaveToFullEntitiesToScreeningEntityTable --> XMLConvert["Convert JSON to XML with XSLT Transformation"]:::step
     XMLConvert --> N["Call NetReveal Screening API for current **{entityId}**, **{journeyId}**"]:::step
+
     N --> Q{"More entities to process?"}:::decision
     Q -- Yes --> LoopStart
     Q -- No --> O["Save NetReveal AlertId in Database against each entity"]:::step

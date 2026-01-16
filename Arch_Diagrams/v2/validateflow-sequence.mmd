@@ -16,16 +16,16 @@ sequenceDiagram
   iHubIn-->>-Client: Response acknowledged
   
   %% Store request
-  CLMAdaptor->>+DB: Store Request payload
+  CLMAdaptor->>+DB: Store Request payload in RequestResponsePayload Table
   DB-->>-CLMAdaptor: Stored
   
   %% Call FenX SuperGraph API to get Current/Draft Entities
   Note over CLMAdaptor: Call SuperGraph to get Entities involved including RP (Current/Draft Entity Data)
-  CLMAdaptor->>+iHubIn: Call FenX SuperGraph API with JourneyId
-  iHubIn->>+FenX: Forward SuperGraph request
-  FenX-->>-iHubIn: Return {allEntities} (EntityIDs & RelatedParties)
-  iHubIn-->>-CLMAdaptor: Return {allEntities}
-  CLMAdaptor->>+DB: Save SuperGraph Request / Response
+  CLMAdaptor->>+iHubIn: Call FenX SuperGraph API with JourneyId (JSON)
+  iHubIn->>+FenX: Forward SuperGraph request (JSON)
+  FenX-->>-iHubIn: Return array[{allEntities}] with {entityId}, {entityDraftId} (JSON)
+  iHubIn-->>-CLMAdaptor: Return array[{allEntities}]
+  CLMAdaptor->>+DB: Save SuperGraph Request / Response to RequestResponsePayload Table
   DB-->>-CLMAdaptor: Saved
   
   %% Loop through all entities
@@ -36,42 +36,48 @@ sequenceDiagram
     CLMAdaptor->>CLMAdaptor: Convert JSON to XML
     
     %% Call NetReveal API
-    CLMAdaptor->>+iHubOut: Call NetReveal API (XML) using CustomerId/{entityId}
+    CLMAdaptor->>+iHubOut: Call NetReveal API (XML) using {entityID},{requestId}
     iHubOut->>+NetReveal: Forward request (XML)
-    NetReveal-->>-iHubOut: Return Alerts / Screening results (XML)
-    iHubOut-->>-CLMAdaptor: Return Alerts / Screening results (XML)
+    NetReveal-->>-iHubOut: Return OpenWLMActiveAlerts (XML)
+    iHubOut-->>-CLMAdaptor: Return OpenWLMActiveAlerts (XML)
     
     %% Save NetReveal response
-    CLMAdaptor->>+DB: Store screening results in Database
+    CLMAdaptor->>+DB: Store screening results in RequestResponsePayload Table
     DB-->>-CLMAdaptor: Saved
+    
+    %% Check for True Hits per entity
+    CLMAdaptor->>CLMAdaptor: Check if any True Hits found in OpenWLMActiveAlerts
+    
+    alt True Hits Found for this Entity
+      Note over CLMAdaptor: True Hit detected - Update Draft Entity
+      CLMAdaptor->>+iHubIn: Call FenX API /api/v3/{entityId}/draft/{id} - Update Draft Entity with {entityId}, {entityDraftId} and Alert Flag (JSON)
+      iHubIn->>+FenX: Forward Draft Entity update request (JSON)
+      FenX-->>-iHubIn: Return success (JSON)
+      iHubIn-->>-CLMAdaptor: Draft Entity updated
+    else No True Hits for this Entity
+      Note over CLMAdaptor: No True Hits - Increment counter
+      CLMAdaptor->>CLMAdaptor: Increment No True Hits counter
+    end
     
   end
   
-  %% Check for True Hits
-  CLMAdaptor->>CLMAdaptor: Analyze screening results for True Hits
+  %% Check aggregate True Hits count
+  Note over CLMAdaptor: Evaluate: Count of No True Hits >= {entityTotalCount}
   
-  alt No True Hits Found
+  alt No True Hits Found (Count of No True Hits >= {entityTotalCount})
     Note over CLMAdaptor: No True Hits - Close Validation Task
-    CLMAdaptor->>CLMAdaptor: Convert JSON -> XML locally, Encrypt JSON
-    CLMAdaptor->>+iHubIn: Call FenX API to close Validation Task: /api/journey-instance/{journeyInstanceId}/task/complete
-    iHubIn->>+FenX: Forward task completion request
+
+    CLMAdaptor->>+iHubIn: Call FenX API to close Validation Task: /api/journey-instance/{journeyInstanceId}/task/complete (JSON)
+    iHubIn->>+FenX: Forward task completion request (JSON)
     FenX-->>-iHubIn: Return 200 OK (Validation Task Closed)
     iHubIn-->>-CLMAdaptor: Validation Task Closed
-    CLMAdaptor->>+DB: Record task closure
+    CLMAdaptor->>+DB: Record task closure in RequestResponsePayload Table
     DB-->>-CLMAdaptor: Recorded
     Note over CLMAdaptor: End process - Validation Task closed successfully
-  else True Hits Found
-    Note over CLMAdaptor: True Hits detected - Keep Validation Task open for manual review
-    CLMAdaptor->>+DB: Record that manual review is required
-    DB-->>-CLMAdaptor: Recorded
-    Note over CLMAdaptor: End process - Validation Task remains open
+  
   end
 
 alt Error Occurs
-    CLMAdaptor->>+DB: Log Error to Error table
-    DB-->>-CLMAdaptor: Logged
-    CLMAdaptor->>+iHubIn: Call Receptor API with Error details
-    iHubIn->>+FenX: Forward error to Receptor API
-    FenX-->>-iHubIn: Acknowledged
-    iHubIn-->>-CLMAdaptor: Error reported
+    CLMAdaptor->>+CLMAdaptor: Log Error to Azure Application Insight Error Logs
+     
 end

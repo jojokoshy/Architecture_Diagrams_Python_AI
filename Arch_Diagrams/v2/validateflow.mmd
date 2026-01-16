@@ -9,7 +9,7 @@ classDef footer fill:#ffffff,stroke:none,color:#0f172a;
 subgraph Comments [Comments / Legend]
   direction LR
   style Comments fill:#f9fafb,stroke:#e5e7eb,color:#0f172a,stroke-width:1px;
-  note1["Note: This flow is triggered by Screening Journey Adaptor Calls from FenX via Hub API Gateway. The flow is very similar to Cancel flow except that it uses <b>Current / Draft Entity Data</b> instead of <b>Verified Entities</b> in Cancel Journey.
+  note1["Note: This flow is triggered by Cancel Event and will Only receive JourneyId as input. The flow is very similar to Cancel flow except that it uses <b>Current / Draft Entity Data</b> instead of <b>Verified Entities</b> in Cancel Journey.
   The idea is to build re-usable Durable Activity Functions which will be orchestrated using different Orchestration Functions based on the business flow ( cancel flow, screening flow , approval flow etc)"]:::footer
 end
 subgraph MainFlow [Main Flow]
@@ -18,34 +18,39 @@ subgraph MainFlow [Main Flow]
     A["Client clicks 'Validate Task' on Main Screening Flow"]:::step
   end
 
-  A --> B["POST payload to iHub API Gateway (includes JourneyId only)"]:::step
-  B --> D["Respond 200 OK to client immediately"]:::step
-  D --> F["Store Request payload in database"]:::step
-  F --> Gcall["Calls FenX API SuperGraph and Get Entities involved including RP {allEntities}. Will just get the Entities involved, no other details required as Screening is already done."]:::step
-  Gcall --> H["FenX (SuperGraph) returns EntityIDs & RelatedParties"]:::step
+  A --> B["Receive HTTP POST with **{JourneyId}** due to Validate Event via Hub API Gateway"]:::step
+  B --> D["Respond HTTP Status 200 immediately"]:::step
+  D --> F["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
+  F --> Gcall["Calls FenX SuperGraph API and Get Entities. Pass current **{JourneyId}**, return Entity and Related Parties **array[{allEntities}]** , all allEntities must contain **{entityId}, {entityDraftId}**, other data not required. **{entityId}, {entityDraftId}** used to update Entity in current Journey"]:::step
+  
+  Gcall --> H["Save Supergraph API Response with all Verified Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
 
-  subgraph EntityLoop["Per-Entity Processing {allEntities}"]
+  subgraph EntityLoop["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]
     direction TB
-    I["Process each EntityID / RelatedParty"]:::loop
+    I["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]:::loop
     I --> J["Convert JSON -> XML locally for the entity payload"]:::step
-    J --> K["Call NetReveal API (via iHubOut) using CustomerId/ {entityID}"]:::step
-    K --> L["NetReveal returns Alerts / Screening results"]:::step
-    L --> M["Store screening results in Database"]:::step
-    M --> N{"More entities to process?"}:::decision
+    J --> K["Call NetReveal API  using   **{entityID},{requestId}**"]:::step
+    K --> L["NetReveal returns OpenWLMActiveAlerts"]:::step
+    L --> M["Store screening results in <b>RequestResponsePayload</b> Table in DB"]:::step
+    M --> M0{"Check if any True Hits found in OpenWLMActiveAlerts"}:::decision
+    M0 -- Yes --> M1["Call FenX API **/api/v3/{entityId}/draft/{id}** and Update - Draft Entity with **{entityId}, {entityDraftId}** and Alert Flag "]:::step
+    M0 -- No --> M2["Increment No True Hits counter"]:::step
+    M2 --> N{"More entities to process?"}:::decision
+    M1 --> N
     N -->|Yes| I
     N -->|No| endloop["End entity loop"]
   end
 
   H --> I
-  endloop --> O{"Any True Hits found?"}:::decision
+  endloop --> O{"Any True Hits found? Count of No True Hits >= {entityTotalCount} "}:::decision
 
   O -->|No| Ppre["Convert JSON -> XML locally, Encrypt JSON"]:::step
    %% Call to close the Validation Task in FenX - This API call will close the Validation Task in FenX, need to update TSD.
-  Ppre --> Pcall["CLM-Adaptor calls FenX API to close Validation Task (JourneyId) - calling - /api/journey-instance/{journeyInstanceId}/task/complete"]:::step 
+  Ppre --> Pcall["CLM-Adaptor calls FenX API to close Validation Task **{JourneyId}** - calling - **/api/journey-instance/{journeyInstanceId}/task/complete**"]:::step 
   Pcall --> Q["FenX closes Validation Task and returns 200 OK (Closed)"]:::step
-  Q --> R["CLM-Adaptor records closure"]:::step
-
-  O -->|Yes| S["Keep Validation Task open for manual review"]:::step
+  Q --> R["Store screening results in <b>RequestResponsePayload</b> Table in DB"]:::step
+  R --> T["End process - No response sent back to FenX"]:::footer
+  O -->|Yes| T
 end
 style MainFlow stroke-dasharray: 5 5
 
@@ -55,9 +60,8 @@ IfError{"if error?"}:::decision
 %% Error handling block to the right
 subgraph ErrorHandler [Error handling]
   direction TB
-  EH1["Log Error to Error table"]:::step
-  EH2["Call Receptor API with Error details"]:::step
-  EH1 --> EH2
+  EH1["Log Error to Application Insight Error Logs"]:::step
+ 
 end
 
 style ErrorHandler fill:#ffe6e6,stroke:#ff0000,stroke-dasharray: 5 5

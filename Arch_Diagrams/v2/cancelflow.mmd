@@ -18,7 +18,7 @@ subgraph MainFlow [Main Flow]
   A["Receive HTTP POST with **{JourneyId}** due to Cancel Event via Hub API Gateway"]:::step --> B["Respond HTTP Status 200 immediately"]:::step
   B --> C["Decrypt payload using Azure Key Vault keys. Payload contains JourneyId"]:::step
   C --> D["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
-  D --> E["Create SuperGraph using GraphQL with **{RequestId}**, **{JourneyId}** to Fetch <b>Verified Entity and Related Entities</b>"]:::step
+  D --> E["Create FenX SuperGraph using GraphQL with **{RequestId}**, **{JourneyId}** to Fetch <b>Verified Entity and Related Entities</b>"]:::step
   E --> SaveEntitiesToDB["Save Supergraph API Response with all Verified Entities to <b>RequestResponsePayload</b> Table in DB"]:::step
   SaveEntitiesToDB --> SaveEntitiesToScreeningEntityTable["Insert all  Entities (Main and RP) to <b>ScreeningEntity</b> Table in DB with **{JourneyId}**, **{ProcessId}**, **{EntityId}**, **{BatchId}**, **{BranchCode}**, **{EntityStatus}**"]:::step
   

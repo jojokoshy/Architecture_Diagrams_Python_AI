@@ -23,5 +23,9 @@ cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\screenERD.mmd" -o "Ar
 
 cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\AlertsFlowv2v2.mmd" -o "Arch_Diagrams\diagrams\v2\AlertsFlowv2v2.png" -w 4096
 
+cmd /c npx -y @mermaid-js/mermaid-cli -i "Arch_Diagrams\v2\NeRevealAPIAuthflow.mmd" -o "Arch_Diagrams\diagrams\v2\NetRevealAPIAuthflow.png" -w 4096
+ 
+
 cmd /c for %f in (Arch_Diagrams\v2*.mmd) do npx -y @mermaid-js/mermaid-cli -i "%f" -o "Arch_Diagrams\diagrams\v2%~nf.png" -w 4096
+
 

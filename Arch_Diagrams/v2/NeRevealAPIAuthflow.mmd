@@ -1,0 +1,39 @@
+sequenceDiagram
+         
+
+participant CLM 
+participant IHUB 
+participant AzureKeyVault 
+participant NetReveal 
+
+CLM->>IHUB: API Request (Include API Key) 
+note right of IHUB: Validate CLM request 
+
+alt API Key invalid 
+    IHUB->>CLM: 401 Unauthorized 
+else API Key valid 
+    note right of IHUB: Check cached JWT token 
+    alt Token not cached or expired 
+        IHUB->>IHUB: Check cached Token
+        IHUB->>AzureKeyVault: Retrieve shared secret 
+        note right of IHUB: Request for Token using secret 
+        IHUB->>NetReveal: Request for Token
+        IHUB->>IHUB: Cache Token 
+    else Token cached and valid 
+        note right of IHUB: Use cached JWT 
+    end 
+
+    note right of IHUB: Forward API request with JWT Bearer Token 
+    IHUB->>NetReveal: API Request (Authorization: Bearer <JWT>) 
+
+    alt JWT valid 
+        NetReveal->>IHUB: 200 OK (Response) 
+        IHUB->>CLM: 200 OK (Forward Response) 
+    else JWT invalid 
+        NetReveal->>IHUB: 401 Unauthorized 
+        IHUB->>CLM: 500 Internal Server Error 
+    else other Error response  
+        NetReveal->>IHUB: Error Response 
+        IHUB->>CLM: Forward respective error code 
+    end 
+end

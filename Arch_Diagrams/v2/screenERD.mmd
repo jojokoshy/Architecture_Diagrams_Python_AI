@@ -30,7 +30,8 @@ erDiagram
         Guid JourneyId
         Guid ProcessId
         Guid EntityId
-        %% The ScreeningEntityID is a combination of EntityId and BranchCode to uniquely identify an entity being screened per branch.
+        %% The ScreeningEntityID is a combination of EntityId and BranchCode to uniquely identify an entity being screened per branch. Entity_id_BranchCode, e.g., 12345_001
+        %% This is to support screening the same entity to be screened multiple times for different branches in the same journey/process/batch.
         string ScreeningEntityID
         Guid RelationshipId
         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
@@ -41,6 +42,10 @@ erDiagram
         %% BranchCode will be used to Derive OrgCode from a Mapping Table
         string OrgCode FK BrachCodeOrgCodeMapping OrgCode
         string EntityStatus 
+        %%% Possible Values: Screened, NoScreening. This is the returned Screening Status from NetReveal Screening API. It is used to identify if the entity was screened or not.
+        %%% This value is used in ReWork flow to identify entities that were not screened in previous runs. If NoScreening then the entity will be reprocessed in ReWork flow to get the 
+        %%% alerts previously generated for the entity.
+        string ScreeningStatus
         string EntityDetailsJson
         string ScreeningStage
         date CreatedOn

@@ -63,14 +63,16 @@ subgraph MainFlow ["Main Flow"]
   end
 
   Done --> CheckDatabaseforExistingJourney{"Check if **ReWork** by checking <b>ScreeningEntity</b> Table for same <b>**{JourneyId}**, **{ProcessId}**, **{EntityId}**</b> and a different compared to current <b>**{BatchId}**</b> "}:::decision
-  CheckDatabaseforExistingJourney --same **JourneyId**, **ProcessId** Different **BatchId** --> GetJourneyStartTime["Get earliest **{currentJourneyStartTime}** from <b>ScreeningBatch</b> Table for current **{JourneyId}**, **{ProcessId}**, **{EntityId}** excluding **{BatchId}**"]:::step
+  CheckDatabaseforExistingJourney -- Yes ReWork **JourneyId**, **ProcessId** Different **BatchId** --> GetJourneyStartTime["Get earliest **{currentJourneyStartTime}** from <b>ScreeningBatch</b> Table for current **{JourneyId}**, **{ProcessId}**, **{EntityId}** excluding **{BatchId}**"]:::step
+  CheckDatabaseforExistingJourney -- No First time JourneyId , ProcessId --> P["End process - No response sent back to FenX"]:::footer
   GetJourneyStartTime --> LoopAlertByCustomer[("Loop: All Entities")]:::loop
   LoopAlertByCustomer --> CallNRGetAlertByCustomer["Call NetReveal Get Alert By Customer API using current **{entityId}**, **{currentJourneyStartTime}**"]:::step
   CallNRGetAlertByCustomer --> SaveAlertToDB["Save NetReveal Get Alert By Customer API Response AlertId in <b>RequestResponsePayload</b> Table in DB against current entity **{entityId}**, **{JourneyId}**, **{BatchId}**"]:::step
   SaveAlertToDB --> SaveToScreeningHitDetailsTable["Save <b>ScreeningHitDetails</b> Table with current **{entityId}**, **{JourneyId}**, **{BatchId}**, **{AlertId}**, **{ScreeningStatus}**, **{ScreeningResult}**"]:::step
   SaveToScreeningHitDetailsTable --> AlertDecision{"More alerts to process?"}:::decision
   AlertDecision -- Yes --> LoopAlertByCustomer
-  AlertDecision -- No --> P["End process - No response sent back to FenX"]:::footer
+  AlertDecision -- No --> P["End process - No response sent back to FenX"]
+  P --> EndProcess["End of Rework Flow"]:::footer
 end
 
 style MainFlow stroke-dasharray: 5 5

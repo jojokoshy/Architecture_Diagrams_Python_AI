@@ -32,7 +32,7 @@ erDiagram
         Guid EntityId
         %% The ScreeningEntityID is a combination of EntityId and BranchCode to uniquely identify an entity being screened per branch. Entity_id_BranchCode, e.g., 12345_001
         %% This is to support screening the same entity to be screened multiple times for different branches in the same journey/process/batch.
-        string ScreeningEntityID
+        string ScreeningEntityId
         Guid RelationshipId
         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId
@@ -66,7 +66,9 @@ erDiagram
         Guid BatchId
         Guid JourneyId
         Guid ProcessId
-        Guid EntityId FK ScreeningEntity EntityId
+        Guid EntityId
+        %% The ScreeningEntityID is a combination of EntityId and BranchCode to uniquely identify an entity being screened per branch. Entity_id_BranchCode, e.g., 12345_001
+        string ScreeningEntityId FK ScreeningEntity ScreeningEntityId
          %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId
         %%% The Screening Flag indicates if the Entity Triggered a Screening - Yes/No from NetReveal - Screening Field.
@@ -84,9 +86,11 @@ erDiagram
         Guid ID PK
         Guid BatchId
         Guid JourneyId
+        Guid EntityId
         Guid ScreeningHitId FK ScreeningHit ID
         string AlertId FK ScreeningHit AlertId
-        Guid EntityId FK ScreeningEntity EntityId
+        %%% This is the combination of EntityId and BranchCode to uniquely identify an entity being screened per branch. Entity_id_BranchCode, e.g., 12345_001
+        string ScreeningEntityId FK ScreeningEntity ScreeningEntityId
          %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId
         string EntityType

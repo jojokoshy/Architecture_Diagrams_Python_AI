@@ -31,7 +31,21 @@ sequenceDiagram
     DB-->>CLMAdaptor: Stored
   end
   
-  %% Call FenX SuperGraph API
+  %% Call FenX SuperGraph API to get BranchIds early
+  Note over CLMAdaptor: Get BranchIds and Department for Main Entity
+  CLMAdaptor->>+iHubIn: Call SuperGraph API to get {BranchIds} and Department for Main Entity using {JourneyId}
+  iHubIn->>+FenX: Forward SuperGraph request
+  FenX-->>-iHubIn: Return {BranchIds} and Department
+  iHubIn-->>-CLMAdaptor: Return {BranchIds} and Department
+  CLMAdaptor->>+DB: Save {BranchIds} and Department mapping to ScreeningBatch table for {JourneyId}, {ProcessId}, {BatchId}
+  DB-->>-CLMAdaptor: Saved branch mapping
+  
+  %% Save entities X branches to ScreeningEntity table
+  Note over CLMAdaptor: Save all entities multiplied by number of branches
+  CLMAdaptor->>+DB: Insert {allEntities} X {BranchIds} into ScreeningEntity table (e.g., (1 MainEntity + 4 RPs) X 3 branches = 15 rows) with entityId_BranchId, JourneyId, ProcessId, BatchId
+  DB-->>-CLMAdaptor: Saved screening entities (15 rows)
+  
+  %% Call FenX SuperGraph API for all entities
   Note over CLMAdaptor: Get all Entities for current Journey
   CLMAdaptor->>+iHubIn: Call SuperGraph API with JourneyId
   iHubIn->>+FenX: Forward SuperGraph request
@@ -39,8 +53,6 @@ sequenceDiagram
   iHubIn-->>-CLMAdaptor: Return {allEntities} 
   CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table (store OrchestrationInstanceId)
   DB-->>-CLMAdaptor: Saved
-  CLMAdaptor->>+DB: Insert {allEntities} into ScreeningEntity table with JourneyId, ProcessId, EntityId, BatchId, BranchCode, EntityStatus, OrchestrationInstanceId
-  DB-->>-CLMAdaptor: Saved screening entities
   
   %% Call FenX Association Query API
   Note over CLMAdaptor: Identify Deleted Entities from SuperGraph
@@ -87,53 +99,66 @@ sequenceDiagram
     iHubIn-->>-CLMAdaptor: Return Full Entity Details  
     CLMAdaptor->>+DB: Save Full Entity Details to RequestResponsePayload table with OrgUnit Mapping and Active/Inactive status (include OrchestrationInstanceId)
     DB-->>-CLMAdaptor: Saved
-  CLMAdaptor->>+DB: Update ScreeningEntity table with Full Entity Details, OrgUnit mapping, and Active/Inactive status (OrchestrationInstanceId tracked)
-  DB-->>-CLMAdaptor: ScreeningEntity updated
+  CLMAdaptor->>+DB: Update ScreeningEntity table with Full Entity Details, OrgUnit mapping, and Active/Inactive status for all {entityId}_{BranchId} combinations (OrchestrationInstanceId tracked)
+  DB-->>-CLMAdaptor: ScreeningEntity updated (1 X Number_of_Branches = 3 rows)
     
-    %% Prepare to call NetReveal - Convert JSON to XML
-    Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
-    CLMAdaptor->>+CLMAdaptor: Convert JSON to XML using XSLT Transformation
-    
-    %% Call NetReveal Screening API
-    CLMAdaptor->>+iHubOut: Call NetReveal Screening API for {entityId}, {journeyId}, {BranchId} (XML)
-    iHubOut->>+NetReveal: Forward Screening request (XML)
-    NetReveal-->>iHubOut: Return AlertId and ScreeningStatus (XML)
-    iHubOut-->>CLMAdaptor: Return AlertId and ScreeningStatus (XML)
-    
-    %% Save NetReveal response
-    CLMAdaptor->>+DB: Save NetReveal AlertId(s) to RequestResponsePayload table for {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId). Only AlertIds for Hit/Match are returned.
-    DB-->>CLMAdaptor: Saved
+    %% New nested loop: Loop through all branches for current entity
+    loop For Each Branch in {BranchIds} for current Entity
+      Note over CLMAdaptor: Process entity for each branch - NetReveal Screening
+      
+      %% Prepare to call NetReveal - Convert JSON to XML
+      Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
+      CLMAdaptor->>+CLMAdaptor: Convert JSON to XML using XSLT Transformation
+      
+      %% Call NetReveal Screening API for current entity and branch
+      CLMAdaptor->>+iHubOut: Call NetReveal Screening API for {entityId}, {journeyId}, {BranchId} (XML)
+      iHubOut->>+NetReveal: Forward Screening request (XML)
+      NetReveal-->>iHubOut: Return AlertId and ScreeningStatus (XML)
+      iHubOut-->>CLMAdaptor: Return AlertId and ScreeningStatus (XML)
+      
+      %% Save NetReveal response
+      CLMAdaptor->>+DB: Save NetReveal AlertId(s) to RequestResponsePayload table for {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId). Only AlertIds for Hit/Match are returned.
+      DB-->>CLMAdaptor: Saved
 
-    %% Check Alert Screening Status
-    alt Alert has ScreeningStatus (Hit/Match returned)
-      Note over CLMAdaptor: AlertId(s) returned with Hit/Match — persist all AlertIds to ScreeningHit (may be multiple)
-      CLMAdaptor->>+DB: Save to ScreeningHit with {entityId}, {JourneyId}, {BatchId}, {AlertIds}, {ScreeningStatus}, {ScreeningResult}, {OrchestrationInstanceId}
+      %% Save to ScreeningHit table
+      Note over CLMAdaptor: Persist AlertIds to ScreeningHit (could be multiple per entity)
+      CLMAdaptor->>+DB: Save to ScreeningHit with {entityId}, {JourneyId}, {BatchId}, {AlertIds}. Only AlertIds with Hit/Match are returned.
       DB-->>-CLMAdaptor: Saved
-    else No ScreeningStatus (NetReveal did not re-screen)
-      Note over CLMAdaptor: NetReveal may not have re-screened — check for previous alerts in DB
-      CLMAdaptor->>+DB: Check ScreeningEntity table for same {JourneyId}, {ProcessId}, {EntityId} with different {BatchId} (using OrchestrationInstanceId)
-      DB-->>-CLMAdaptor: Return previous journey records
-
-      alt Previous journey found with different BatchId
-        Note over CLMAdaptor: Get previous alerts from NetReveal using Get Alert By Customer API
-        CLMAdaptor->>+DB: Get earliest currentJourneyStartTime from ScreeningBatch table for {JourneyId}, {ProcessId}, {EntityId} (exclude current {BatchId})
-        DB-->>-CLMAdaptor: Return currentJourneyStartTime
-
-        CLMAdaptor->>+iHubOut: Call NetReveal Get Alert By Customer API with {EntityId}, {currentJourneyStartTime} (XML)
-        iHubOut->>+NetReveal: Forward Get Alert By Customer request (XML)
-        NetReveal-->>-iHubOut: Return AlertId(s) from previous screening (XML)
-        iHubOut-->>-CLMAdaptor: Return AlertId(s) (XML)
-
-        CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId(s) to RequestResponsePayload table for {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId)
-        DB-->>-CLMAdaptor: Saved
-
-        CLMAdaptor->>+DB: Save to ScreeningHitDetails with {entityId}, {JourneyId}, {BatchId}, {AlertIds}, {ScreeningStatus}, {ScreeningResult}, {OrchestrationInstanceId}
-        DB-->>-CLMAdaptor: Saved
-      else No previous journey found
-        Note over CLMAdaptor: No previous alerts - continue to next entity
-      end
+      
+      %% Update ScreeningEntity with ScreeningStatus from NetReveal
+      CLMAdaptor->>+DB: Update ScreeningEntity table with {entityId}_{BranchId}, {entityId}, {BranchId}, {JourneyId}, {BatchId}, {ScreeningStatus} from NetReveal API
+      DB-->>-CLMAdaptor: Updated ScreeningEntity status
     end
     
+  end
+  
+  %% After all entities processed, check for ReWork scenario
+  Note over CLMAdaptor: Check if this is a ReWork scenario (moved outside main loop)
+  CLMAdaptor->>+DB: Check ScreeningEntity table for same {JourneyId}, {ProcessId}, {EntityId} with different {BatchId}
+  DB-->>-CLMAdaptor: Return previous journey records
+
+  alt Previous journey found with different BatchId (ReWork scenario)
+    Note over CLMAdaptor: ReWork scenario - get previous alerts from NetReveal
+    CLMAdaptor->>+DB: Get earliest {currentJourneyStartTime} from ScreeningBatch table for {JourneyId}, {ProcessId}, {EntityId} (exclude current {BatchId})
+    DB-->>-CLMAdaptor: Return currentJourneyStartTime
+
+    %% Loop through all entityId_BranchId combinations where ScreeningStatus = 'NoScreening'
+    loop For Each {entityId}_{BranchId} from ScreeningEntity where ScreeningStatus = 'NoScreening'
+      Note over CLMAdaptor: Get alerts for entities that were not re-screened by NetReveal
+      
+      CLMAdaptor->>+iHubOut: Call NetReveal Get Alert By Customer API with {entityId}_{BranchId}, {currentJourneyStartTime} (XML)
+      iHubOut->>+NetReveal: Forward Get Alert By Customer request (XML)
+      NetReveal-->>-iHubOut: Return AlertId(s) from previous screening (XML)
+      iHubOut-->>-CLMAdaptor: Return AlertId(s) (XML)
+
+      CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId(s) to RequestResponsePayload table for {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId)
+      DB-->>-CLMAdaptor: Saved
+
+      CLMAdaptor->>+DB: Save to ScreeningHitDetails with {entityId}, {JourneyId}, {BatchId}, {AlertIds}, {ScreeningStatus}, {ScreeningResult}, {OrchestrationInstanceId}
+      DB-->>-CLMAdaptor: Saved
+    end
+  else No previous journey found (First time processing)
+    Note over CLMAdaptor: First time processing this JourneyId and ProcessId - no previous alerts to retrieve
   end
   
   Note over CLMAdaptor: End process - No response sent back to FenX

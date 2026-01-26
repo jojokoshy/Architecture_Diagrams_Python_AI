@@ -10,61 +10,74 @@ sequenceDiagram
   participant iHubOut as "iHub API Mgmt (NetReveal)"
   participant NetReveal
 
-  %% Initial request
-  Client->>+CLMAdaptor: HTTP POST with JourneyID, EntityID, Related Entities (encrypted JSON)
+  %% Initial request and decryption
+  rect rgb(224, 242, 254)
+    Note over Client,CLMAdaptor: Initial Request & Decryption
+    Client->>+CLMAdaptor: HTTP POST with JourneyID, EntityID, Related Entities (encrypted JSON)
 
-  %% Decrypt payload (must happen before validation)
-  CLMAdaptor->>+KeyVault: Request decryption key
-  KeyVault-->>CLMAdaptor: Return key
-  CLMAdaptor->>+CLMAdaptor: Decrypt payload using KeyVault key (contains allEntities)
+    %% Decrypt payload (must happen before validation)
+    CLMAdaptor->>+KeyVault: Request decryption key
+    KeyVault-->>CLMAdaptor: Return key
+    CLMAdaptor->>+CLMAdaptor: Decrypt payload using KeyVault key (contains allEntities)
 
-  %% Validate request schema
-  CLMAdaptor->>+CLMAdaptor: Validate request schema for required fields (JourneyID, EntityID, Related Entities)
-  alt Schema Invalid
-    CLMAdaptor-->>Client: HTTP 400 Bad Request with validation errors
-    %% End processing on validation error
-  else Schema Valid
-    CLMAdaptor-->>Client: HTTP 202 Accepted (immediate response)
+    %% Validate request schema
+    CLMAdaptor->>+CLMAdaptor: Validate request schema for required fields (JourneyID, EntityID, Related Entities)
+    alt Schema Invalid
+      CLMAdaptor-->>Client: HTTP 400 Bad Request with validation errors
+      %% End processing on validation error
+    else Schema Valid
+      CLMAdaptor-->>Client: HTTP 202 Accepted (immediate response)
 
-    %% Store request
-    CLMAdaptor->>+DB: Store Request payload in RequestResponsePayload table
-    DB-->>CLMAdaptor: Stored
+      %% Store request
+      CLMAdaptor->>+DB: Store Request payload in RequestResponsePayload table
+      DB-->>CLMAdaptor: Stored
+    end
   end
   
-  %% Call FenX SuperGraph API to get BranchIds early
-  Note over CLMAdaptor: Get BranchIds and Department for Main Entity
-  CLMAdaptor->>+iHubIn: Call SuperGraph API to get {BranchIds} and Department for Main Entity using {JourneyId}
-  iHubIn->>+FenX: Forward SuperGraph request
-  FenX-->>-iHubIn: Return {BranchIds} and Department
-  iHubIn-->>-CLMAdaptor: Return {BranchIds} and Department
-  CLMAdaptor->>+DB: Save {BranchIds} and Department mapping to ScreeningBatch table for {JourneyId}, {ProcessId}, {BatchId}
-  DB-->>-CLMAdaptor: Saved branch mapping
+  %% Early branch lookup and entity setup
+  rect rgb(220, 252, 231)
+    Note over CLMAdaptor,FenX: Early Branch & Entity Setup
+    %% Call FenX SuperGraph API to get BranchIds early
+    Note over CLMAdaptor: Get BranchIds and Department for Main Entity
+    CLMAdaptor->>+iHubIn: Call SuperGraph API to get {BranchIds} and Department for Main Entity using {JourneyId}
+    iHubIn->>+FenX: Forward SuperGraph request
+    FenX-->>-iHubIn: Return {BranchIds} and Department
+    iHubIn-->>-CLMAdaptor: Return {BranchIds} and Department
+    CLMAdaptor->>+DB: Save {BranchIds} and Department mapping to ScreeningBatch table for {JourneyId}, {ProcessId}, {BatchId}
+    DB-->>-CLMAdaptor: Saved branch mapping
+    
+    %% Save entities X branches to ScreeningEntity table
+    Note over CLMAdaptor: Save all entities multiplied by number of branches
+    CLMAdaptor->>+DB: Insert {allEntities} X {BranchIds} into ScreeningEntity table (e.g., (1 MainEntity + 4 RPs) X 3 branches = 15 rows) with entityId_BranchId, JourneyId, ProcessId, BatchId
+    DB-->>-CLMAdaptor: Saved screening entities (15 rows)
+    
+    %% Call FenX SuperGraph API for all entities
+    Note over CLMAdaptor: Get all Entities for current Journey
+    CLMAdaptor->>+iHubIn: Call SuperGraph API with JourneyId
+    iHubIn->>+FenX: Forward SuperGraph request
+    FenX-->>-iHubIn: Return {allEntities} 
+    iHubIn-->>-CLMAdaptor: Return {allEntities} 
+    CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table (store OrchestrationInstanceId)
+    DB-->>-CLMAdaptor: Saved
+  end
   
-  %% Save entities X branches to ScreeningEntity table
-  Note over CLMAdaptor: Save all entities multiplied by number of branches
-  CLMAdaptor->>+DB: Insert {allEntities} X {BranchIds} into ScreeningEntity table (e.g., (1 MainEntity + 4 RPs) X 3 branches = 15 rows) with entityId_BranchId, JourneyId, ProcessId, BatchId
-  DB-->>-CLMAdaptor: Saved screening entities (15 rows)
+  %% Association query for deleted entities
+  rect rgb(254, 243, 199)
+    Note over CLMAdaptor,FenX: Association Query & Deleted Entities
+    %% Call FenX Association Query API
+    Note over CLMAdaptor: Identify Deleted Entities from SuperGraph
+    CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy 
+    iHubIn->>+FenX: Forward Association Query request
+    FenX-->>-iHubIn: Return {deletedEntities} 
+    iHubIn-->>-CLMAdaptor: Return {deletedEntities} 
+    CLMAdaptor->>+DB: Save FenX Association Request / Response to RequestResponsePayload table
+    DB-->>-CLMAdaptor: Saved
+  end
   
-  %% Call FenX SuperGraph API for all entities
-  Note over CLMAdaptor: Get all Entities for current Journey
-  CLMAdaptor->>+iHubIn: Call SuperGraph API with JourneyId
-  iHubIn->>+FenX: Forward SuperGraph request
-  FenX-->>-iHubIn: Return {allEntities} 
-  iHubIn-->>-CLMAdaptor: Return {allEntities} 
-  CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table (store OrchestrationInstanceId)
-  DB-->>-CLMAdaptor: Saved
-  
-  %% Call FenX Association Query API
-  Note over CLMAdaptor: Identify Deleted Entities from SuperGraph
-  CLMAdaptor->>+iHubIn: Call Association API /api/association/root/{EntityId}/journey/{JourneyId}/proposedChanges/hierarchy 
-  iHubIn->>+FenX: Forward Association Query request
-  FenX-->>-iHubIn: Return {deletedEntities} 
-  iHubIn-->>-CLMAdaptor: Return {deletedEntities} 
-  CLMAdaptor->>+DB: Save FenX Association Request / Response to RequestResponsePayload table
-  DB-->>-CLMAdaptor: Saved
-  
-  %% Loop through all entities
-  loop For Each Entity in {allEntities}
+  %% Loop through all entities - Main processing
+  rect rgb(237, 233, 254)
+    Note over CLMAdaptor,FenX: Entity Processing Loop
+    loop For Each Entity in {allEntities}
     
     alt Current Entity is in {deletedEntities}
       Note over CLMAdaptor: Entity marked for deletion - query associations
@@ -103,8 +116,10 @@ sequenceDiagram
   DB-->>-CLMAdaptor: ScreeningEntity updated (1 X Number_of_Branches = 3 rows)
     
     %% New nested loop: Loop through all branches for current entity
-    loop For Each Branch in {BranchIds} for current Entity
-      Note over CLMAdaptor: Process entity for each branch - NetReveal Screening
+    rect rgb(254, 226, 226)
+      Note over CLMAdaptor,NetReveal: Branch Loop - NetReveal Screening
+      loop For Each Branch in {BranchIds} for current Entity
+        Note over CLMAdaptor: Process entity for each branch - NetReveal Screening
       
       %% Prepare to call NetReveal - Convert JSON to XML
       Note over CLMAdaptor: Convert JSON to XML using XSLT Transformation for NetReveal Screening API
@@ -129,45 +144,54 @@ sequenceDiagram
       CLMAdaptor->>+DB: Update ScreeningEntity table with {entityId}_{BranchId}, {entityId}, {BranchId}, {JourneyId}, {BatchId}, {ScreeningStatus} from NetReveal API
       DB-->>-CLMAdaptor: Updated ScreeningEntity status
     end
+    end
     
+  end
   end
   
   %% After all entities processed, check for ReWork scenario
-  Note over CLMAdaptor: Check if this is a ReWork scenario (moved outside main loop)
-  CLMAdaptor->>+DB: Check ScreeningEntity table for same {JourneyId}, {ProcessId}, {EntityId} with different {BatchId}
-  DB-->>-CLMAdaptor: Return previous journey records
+  rect rgb(255, 237, 213)
+    Note over CLMAdaptor,NetReveal: ReWork Check & Alert Retrieval
+    Note over CLMAdaptor: Check if this is a ReWork scenario (moved outside main loop)
+    CLMAdaptor->>+DB: Check ScreeningEntity table for same {JourneyId}, {ProcessId}, {EntityId} with different {BatchId}
+    DB-->>-CLMAdaptor: Return previous journey records
 
-  alt Previous journey found with different BatchId (ReWork scenario)
-    Note over CLMAdaptor: ReWork scenario - get previous alerts from NetReveal
-    CLMAdaptor->>+DB: Get earliest {currentJourneyStartTime} from ScreeningBatch table for {JourneyId}, {ProcessId}, {EntityId} (exclude current {BatchId})
-    DB-->>-CLMAdaptor: Return currentJourneyStartTime
+    alt Previous journey found with different BatchId (ReWork scenario)
+      Note over CLMAdaptor: ReWork scenario - get previous alerts from NetReveal
+      CLMAdaptor->>+DB: Get earliest {currentJourneyStartTime} from ScreeningBatch table for {JourneyId}, {ProcessId}, {EntityId} (exclude current {BatchId})
+      DB-->>-CLMAdaptor: Return currentJourneyStartTime
 
-    %% Loop through all entityId_BranchId combinations where ScreeningStatus = 'NoScreening'
-    loop For Each {entityId}_{BranchId} from ScreeningEntity where ScreeningStatus = 'NoScreening'
-      Note over CLMAdaptor: Get alerts for entities that were not re-screened by NetReveal
-      
-      CLMAdaptor->>+iHubOut: Call NetReveal Get Alert By Customer API with {entityId}_{BranchId}, {currentJourneyStartTime} (XML)
-      iHubOut->>+NetReveal: Forward Get Alert By Customer request (XML)
-      NetReveal-->>-iHubOut: Return AlertId(s) from previous screening (XML)
-      iHubOut-->>-CLMAdaptor: Return AlertId(s) (XML)
+      %% Loop through all entityId_BranchId combinations where ScreeningStatus = 'NoScreening'
+      loop For Each {entityId}_{BranchId} from ScreeningEntity where ScreeningStatus = 'NoScreening'
+        Note over CLMAdaptor: Get alerts for entities that were not re-screened by NetReveal
+        
+        CLMAdaptor->>+iHubOut: Call NetReveal Get Alert By Customer API with {entityId}_{BranchId}, {currentJourneyStartTime} (XML)
+        iHubOut->>+NetReveal: Forward Get Alert By Customer request (XML)
+        NetReveal-->>-iHubOut: Return AlertId(s) from previous screening (XML)
+        iHubOut-->>-CLMAdaptor: Return AlertId(s) (XML)
 
-      CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId(s) to RequestResponsePayload table for {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId)
-      DB-->>-CLMAdaptor: Saved
+        CLMAdaptor->>+DB: Save NetReveal Get Alert By Customer Response AlertId(s) to RequestResponsePayload table for {entityId}, {JourneyId}, {BatchId} (with OrchestrationInstanceId)
+        DB-->>-CLMAdaptor: Saved
 
-      CLMAdaptor->>+DB: Save to ScreeningHitDetails with {entityId}, {JourneyId}, {BatchId}, {AlertIds}, {ScreeningStatus}, {ScreeningResult}, {OrchestrationInstanceId}
-      DB-->>-CLMAdaptor: Saved
+        CLMAdaptor->>+DB: Save to ScreeningHitDetails with {entityId}, {JourneyId}, {BatchId}, {AlertIds}, {ScreeningStatus}, {ScreeningResult}, {OrchestrationInstanceId}
+        DB-->>-CLMAdaptor: Saved
+      end
+    else No previous journey found (First time processing)
+      Note over CLMAdaptor: First time processing this JourneyId and ProcessId - no previous alerts to retrieve
     end
-  else No previous journey found (First time processing)
-    Note over CLMAdaptor: First time processing this JourneyId and ProcessId - no previous alerts to retrieve
   end
   
   Note over CLMAdaptor: End process - No response sent back to FenX
   
-  alt Error Occurs
-    CLMAdaptor->>+DB: Log Error to Error table (correlate OrchestrationInstanceId)
-    DB-->>CLMAdaptor: Logged
-    CLMAdaptor->>+iHubIn: Call Receptor API with Error details
-    iHubIn->>+FenX: Forward error to Receptor API
-    FenX-->>iHubIn: Acknowledged
-    iHubIn-->>CLMAdaptor: Error reported
+  %% Error handling
+  rect rgb(254, 202, 202)
+    Note over CLMAdaptor,FenX: Error Handling
+    alt Error Occurs
+      CLMAdaptor->>+DB: Log Error to Error table (correlate OrchestrationInstanceId)
+      DB-->>CLMAdaptor: Logged
+      CLMAdaptor->>+iHubIn: Call Receptor API with Error details
+      iHubIn->>+FenX: Forward error to Receptor API
+      FenX-->>iHubIn: Acknowledged
+      iHubIn-->>CLMAdaptor: Error reported
+    end
   end

@@ -52,13 +52,13 @@ sequenceDiagram
     DB-->>-CLMAdaptor: Saved screening entities (15 rows)
     
     %% Call FenX SuperGraph API for all entities
-    Note over CLMAdaptor: Get all Entities for current Journey
-    CLMAdaptor->>+iHubIn: Call SuperGraph API with JourneyId
-    iHubIn->>+FenX: Forward SuperGraph request
-    FenX-->>-iHubIn: Return {allEntities} 
-    iHubIn-->>-CLMAdaptor: Return {allEntities} 
-    CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table (store OrchestrationInstanceId)
-    DB-->>-CLMAdaptor: Saved
+    %% Note over CLMAdaptor: Get all Entities for current Journey
+    %% CLMAdaptor->>+iHubIn: Call SuperGraph API with JourneyId
+    %% iHubIn->>+FenX: Forward SuperGraph request
+    %% FenX-->>-iHubIn: Return {allEntities} 
+    %% iHubIn-->>-CLMAdaptor: Return {allEntities} 
+    %% CLMAdaptor->>+DB: Save SuperGraph Response to RequestResponsePayload table (store OrchestrationInstanceId)
+    %% DB-->>-CLMAdaptor: Saved
   end
   
   %% Association query for deleted entities

@@ -30,6 +30,8 @@ erDiagram
         Guid JourneyId
         Guid ProcessId
         Guid EntityId
+        %% The ScreeningEntityID is a combination of EntityId and BranchCode to uniquely identify an entity being screened per branch.
+        string ScreeningEntityID
         Guid RelationshipId
         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId

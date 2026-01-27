@@ -33,7 +33,7 @@ subgraph MainFlow ["Main Flow"]
   
   FenX --> DBSaveAssociation["Save FenX Association Request / Response to <b>RequestResponsePayload</b> Table in DB"]:::step
   
-  DBSaveAssociation --> LoopStart(("Loop: Entities **{allEntities}**")):::loop
+  DBSaveAssociation --> LoopStart[("Loop: Entities **{allEntities}**")]:::loop
 
   subgraph EntitiesLoop ["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]
     direction TB

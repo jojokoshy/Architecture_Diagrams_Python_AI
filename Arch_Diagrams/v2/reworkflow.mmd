@@ -28,7 +28,7 @@ subgraph MainFlow ["Main Flow"]
   D --> CallSuperGraphAPIForBranch
   CallSuperGraphAPIForBranch --> SaveBranchDepartmentToDB["Save **{BranchIds}** and Department mapping to <b>ScreeningBatch</b> Table in DB for current **{JourneyId}**, **{ProcessId}**, **{BatchId}**"]:::step
   SaveBranchDepartmentToDB --> SaveEntitiesToDB
-  SaveEntitiesToDB["Save **{allEntities}** X **{BranchIds}** (e.g. if (1 MainEntity + 4 RPs) X **Number_of_Branches_of_MainEntity = 3**) **{entityId}_{BranchId}** from Initial API Request to <b>ScreeningEntity</b> Table in DB. This call will insert Multiple rows (15 rows), one per **{entityId}_{BranchId} = ScreeningEntityId , {entiyId}, {JourneyId} {ProcessId}, {BatchId}**"]:::step
+  SaveEntitiesToDB["Insert all **{allEntities}** X **{BranchIds}** (e.g. if (1 MainEntity + 4 RPs) X **Number_of_Branches_of_MainEntity = 3**) **{entityId}_{BranchId}** from Initial API Request to <b>ScreeningEntity</b> Table in DB. This call will insert Multiple rows (15 rows), one per **{entityId}_{BranchId} = ScreeningEntityId , {entiyId}, {BranchId} {JourneyId} {ProcessId}, {BatchId}**"]:::step
   SaveEntitiesToDB --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
   
   FenX --> DBSaveAssociation["Save FenX Association Request / Response to <b>RequestResponsePayload</b> Table in DB"]:::step
@@ -38,12 +38,17 @@ subgraph MainFlow ["Main Flow"]
   subgraph EntitiesLoop ["Loop  Entities **{allEntities}**  ( All Entities for Journey  )"]
     direction TB
     LoopStart -->  F{"If Current Entity of **{allEntities}** is in **{deletedEntities}**"}:::decision
-    G["SuperGraph API to replace Query Association API associationquery/api/association/root/**entityId** with current **{entityId}** to find Related EntityIDs"]:::step
+    G["SuperGraph API OR  Query Association API associationquery/api/association/root/**entityId** with current **{entityId}** to find Related  **Parent (only 1 level Parent) {entityId}** of current **{entityId}**"]:::step
+    QuerySuperGraphSearchAPI["Call SuperGraph Search API with all the Parent **{entityIds}** and all **{BranchIds}** of the main Entity In this Journey. The Branches that returned **{returnedBranches}** any entities mean that these branches have entries."]:::step
+    ComputeBranches["Compute Branches to inActivate for Screening by comparing **{BranchIds}** of Main Entity and **{returnedBranches}** of current Entity's Parent Entities. The Branches that match **{returnedBranches}** should have Active Status, the rest of the BranchIds should be InActivated in NetReveal. Output = **{inActivateBranches}**"]:::step
+    G --> QuerySuperGraphSearchAPI
+    QuerySuperGraphSearchAPI --> ComputeBranches
     F -- Yes --> G
     F -- No --> L["Get OrgUnit from Azure SQL DB - Branch and Department mapping"]:::step
-    G --> DBSaveAssociationEntity["Save Entity Association Request Response to <b>RequestResponsePayload</b> Table in DB"]:::step
+    DBSaveAssociationEntity["Save Entity Association Request Response to <b>RequestResponsePayload</b> Table in DB"]:::step
+    ComputeBranches --> DBSaveAssociationEntity
     DBSaveAssociationEntity --> H{"Check Related Entities: Check Array Size of of association query"}:::decision
-    H -- No --> Inactive["Update current **{entityId}**, **{JourneyId}** in <b>ScreeningEntity</b> Table in DB with Empty Related Entities Array as **{EntityStatus}**=InActive. Should update **1 X Number_of_Branches_of_MainEntity = 3** rows"]:::step
+    H -- No --> Inactive["Update current **{entityId}**, **{JourneyId}** in <b>ScreeningEntity</b> Table where BranchId matches **{inActivateBranches}** as **{EntityStatus}**=InActive. Should update **1 X Number_of_Branches_of_MainEntity = 3** rows"]:::step
     H -- Yes --> Active["Update current **{entityId}**, **{JourneyId}** in <b>ScreeningEntity</b> Table in DB with Related Entities Array Count >= 1 as **{EntityStatus}**=Active.Should update **1 X Number_of_Branches_of_MainEntity = 3** rows"]:::step
     Inactive --> L
     Active --> L

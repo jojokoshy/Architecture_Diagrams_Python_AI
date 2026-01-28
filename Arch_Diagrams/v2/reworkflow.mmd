@@ -48,7 +48,7 @@ subgraph MainFlow ["Main Flow"]
     DBSaveAssociationEntity["Save Entity Association Request Response to <b>RequestResponsePayload</b> Table in DB"]:::step
     ComputeBranches --> DBSaveAssociationEntity
     %%DBSaveAssociationEntity --> H{"Check Related Entities: Check Array Size of of association query"}:::decision
-    DBSaveAssociationEntity -- Update --> Inactive["Update current **{entityId}**, **{JourneyId}** in <b>ScreeningEntity</b> Table where BranchId matches **{inActivateBranches}** as **{EntityStatus}**=InActive. Should update **1 X Number_of_Branches_of_MainEntity = 3** rows"]:::step
+    DBSaveAssociationEntity -- Update --> Inactive["Update current **{entityId}**, **{JourneyId}** in <b>ScreeningEntity</b> Table where BranchId matches **{inActivateBranches}** as **{EntityStatus}**=InActive. Should update **1 X  sizeofArray[{inActivateBranches}] = sizeofArray[{inActivateBranches}]** rows updated"]:::step
     %%H -- Yes --> Active["Update current **{entityId}**, **{JourneyId}** in <b>ScreeningEntity</b> Table in DB with Related Entities Array Count >= 1 as **{EntityStatus}**=Active.Should update **1 X Number_of_Branches_of_MainEntity = 3** rows"]:::step
     Inactive --> L
     %% Active --> L

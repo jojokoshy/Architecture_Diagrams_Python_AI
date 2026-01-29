@@ -30,7 +30,8 @@ erDiagram
         Guid JourneyId
         Guid ProcessId
         Guid EntityId
-        %% The ScreeningEntityID is a combination of EntityId and BranchCode to uniquely identify an entity being screened per branch. Entity_id_BranchCode, e.g., 12345_001
+        string SMBCId
+        %% The ScreeningEntityID is a combination of SMBCId and OrgCode to uniquely identify an entity being screened per Org Code. Entity_id_BranchCode, e.g., 12345_001
         %% This is to support screening the same entity to be screened multiple times for different branches in the same journey/process/batch.
         string ScreeningEntityId
         Guid RelationshipId
@@ -52,9 +53,20 @@ erDiagram
         string CreatedBy
     }
     
+    %%% This Table is used to control which branches are used for Screening
+
+    ScreeningBranchStatus {
+        Guid ID PK
+        string BranchId
+        string BranchCode
+        bool IsActive
+
+    }
+
     BrachCodeOrgCodeMapping {
         Guid ID PK
         string BranchCode FK ScreeningEntity BranchCode
+        string Department 
         string OrgCode 
         date CreatedOn
         date validFrom

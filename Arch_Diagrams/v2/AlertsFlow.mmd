@@ -51,6 +51,8 @@ subgraph MainFlow ["Main Flow"]
 		A0_update --> UpdateScreeningHitDetails
 		%%A2 --> LoopStart((Loop: Pending Alerts)):::loop
 		N1_screenOp["Update Journey by calling FenX Receptor API Grouped By <b>{BatchId}</b>. Since it's not Ongoing Screening, call <b>{ScreenOperation}</b> input schema."]:::step
+		ResolveMatches["Call Batch Entity Match Rest API to see if results are saved. /api/v3/batch/**{BatchId}**/entity/{entityId}/match**"]:::step
+		UpdateEntity["Call FenX API with Journey Task Complete api/journeycommand/journey-instance/**{journeyInstanceId}**/task/complete"]:::step
 		N1_screenOp --> UpdateScreeningHitDetails["Update <b>{AlertProcessingStatus=Processed}</b> against <b>{BatchId}</b> to <b>{ScreeningHitDetails}</b> Table "]:::step
 		UpdateScreeningHitDetails --> JourneyAlertJobRunDetails[" Insert into JourneyAlertJobRunDetails (**{BatchId} , {BatchProcessingStatus}, {JourneyAlertJobId}**) "]:::step
 		

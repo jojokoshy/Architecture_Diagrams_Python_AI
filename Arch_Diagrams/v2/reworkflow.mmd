@@ -24,11 +24,11 @@ subgraph MainFlow ["Main Flow"]
   ValidSchemadecision -- No --> SendError["Respond HTTP Status 400 Bad Request with validation errors and end processing"]:::step
   SendStatus --> D["Store Request payload in <b>RequestResponsePayload</b> Table in DB"]:::step
   
-  CallSuperGraphAPIForBranch["Call SuperGraph API to get **{BranchIds}** and Department for the Main Entity In the Journey using **{JourneyId}** and SuperGraph API"]:::step
-  D --> CallSuperGraphAPIForBranch
-  CallSuperGraphAPIForBranch --> SaveBranchDepartmentToDB["Save **{BranchIds}** and Department mapping to <b>ScreeningBatch</b> Table in DB for current **{JourneyId}**, **{ProcessId}**, **{BatchId}**"]:::step
+  D --> CallSuperGraphAPIForBranch["Call SuperGraph API to get **{BranchIds}** and Department for the Main Entity In the Journey using **{JourneyId}** and SuperGraph API"]:::step
+  CallSuperGraphAPIForBranch --> CompareBranchesAgainstBranchesInDB["Compare **{BranchIds}** from SuperGraph API with existing Active Branches in <b>ScreeningBranchStatus</b> Table in DB for current **{BranchIds}** to find if Branches are Active for NetReveal Screening. Return **{newBranchIds}**"]:::step 
+  CompareBranchesAgainstBranchesInDB --> SaveBranchDepartmentToDB["Save **{newBranchIds}** and Department mapping to <b>ScreeningBatch</b> Table in DB for current **{JourneyId}**, **{ProcessId}**, **{BatchId}**"]:::step
   SaveBranchDepartmentToDB --> SaveEntitiesToDB
-  SaveEntitiesToDB["Insert all **{allEntities}** X **{BranchIds}** (e.g. if (1 MainEntity + 4 RPs) X **Number_of_Branches_of_MainEntity = 3**) **{entityId}_{BranchId}** from Initial API Request to <b>ScreeningEntity</b> Table in DB. This call will insert Multiple rows (15 rows), one per **{entityId}_{BranchId} = ScreeningEntityId , {entiyId}, {BranchId} {JourneyId} {ProcessId}, {BatchId}**"]:::step
+  SaveEntitiesToDB["Insert all **{allEntities}** X **{newBranchIds}** (e.g. if (1 MainEntity + 4 RPs) X **number of newBranchIds = 3**) **{entityId}_{BranchId}** from Initial API Request to <b>ScreeningEntity</b> Table in DB. This call will insert Multiple rows (15 rows), one per **{entityId}_{BranchId} = ScreeningEntityId , {entiyId}, {BranchId} {JourneyId} {ProcessId}, {BatchId}**"]:::step
   SaveEntitiesToDB --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
   
   FenX --> DBSaveAssociation["Save FenX Association Request / Response to <b>RequestResponsePayload</b> Table in DB"]:::step
@@ -39,7 +39,7 @@ subgraph MainFlow ["Main Flow"]
     direction TB
     LoopStart -->  F{"If Current Entity of **{allEntities}** is in **{deletedEntities}**"}:::decision
     G["SuperGraph API OR  Query Association API associationquery/api/association/root/**entityId** with current **{entityId}** to find Related  **Parent (only 1 level Parent) {entityId}** of current **{entityId}**"]:::step
-    QuerySuperGraphSearchAPI["Call SuperGraph Search API with all the Parent **{entityIds}** and all **{BranchIds}** of the main Entity In this Journey. The Branches that returned **{returnedBranches}** any entities mean that these branches have entries."]:::step
+    QuerySuperGraphSearchAPI["Call SuperGraph Search API with all the Parent **{entityIds}** and all **{newBranchIds}** of the main Entity In this Journey. The Branches that returned **{returnedBranches}** any entities mean that these branches have entries."]:::step
     ComputeBranches["Compute Branches to inActivate for Screening by comparing **{BranchIds}** of Main Entity and **{returnedBranches}** of current Entity's Parent Entities. The Branches that match **{returnedBranches}** should have Active Status, the rest of the BranchIds should be InActivated in NetReveal. Output = **{inActivateBranches}**"]:::step
     G --> QuerySuperGraphSearchAPI
     QuerySuperGraphSearchAPI --> ComputeBranches

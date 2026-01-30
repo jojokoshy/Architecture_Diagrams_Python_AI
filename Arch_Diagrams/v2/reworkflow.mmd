@@ -26,8 +26,8 @@ subgraph MainFlow ["Main Flow"]
   
   D --> CallSuperGraphAPIForBranch["Call SuperGraph API to get **{BranchIds}** and Department for the Main Entity In the Journey using **{JourneyId}** and SuperGraph API"]:::step
   CallSuperGraphAPIForBranch --> CompareBranchesAgainstBranchesInDB["Compare **{BranchIds}** from SuperGraph API with existing Active Branches in <b>ScreeningBranchStatus</b> Table in DB for current **{BranchIds}** to find if Branches are Active for NetReveal Screening. Return **{newBranchIds}**"]:::step 
-  CompareBranchesAgainstBranchesInDB --> SaveBranchDepartmentToDB["Save **{newBranchIds}** and Department mapping to <b>ScreeningBatch</b> Table in DB for current **{JourneyId}**, **{ProcessId}**, **{BatchId}**"]:::step
-  SaveBranchDepartmentToDB --> SaveEntitiesToDB
+  %%CompareBranchesAgainstBranchesInDB --> SaveBranchDepartmentToDB["Save **{newBranchIds}** and Department mapping to <b>ScreeningBatch</b> Table in DB for current **{JourneyId}**, **{ProcessId}**, **{BatchId}**"]:::step
+  CompareBranchesAgainstBranchesInDB --> SaveEntitiesToDB
   SaveEntitiesToDB["Insert all **{allEntities}** X **{newBranchIds}** (e.g. if (1 MainEntity + 4 RPs) X **number of newBranchIds = 3**) **{entityId}_{BranchId}** from Initial API Request to <b>ScreeningEntity</b> Table in DB. This call will insert Multiple rows (15 rows), one per **{entityId}_{BranchId} = ScreeningEntityId , {entiyId}, {BranchId} {JourneyId} {ProcessId}, {BatchId}**"]:::step
   SaveEntitiesToDB --> FenX["Call FenX Association Query API with Entity ID and Journey\n  /api/association/root/**EntityId**/journey/**JourneyId**/proposedChanges/hierarchy API and get the array of deleted Entities : Return **{deletedEntities}**"]:::step
   

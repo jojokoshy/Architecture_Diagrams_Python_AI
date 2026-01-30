@@ -43,13 +43,15 @@ sequenceDiagram
     iHubIn->>+FenX: Forward SuperGraph request
     FenX-->>-iHubIn: Return {BranchIds} and Department
     iHubIn-->>-CLMAdaptor: Return {BranchIds} and Department
-    CLMAdaptor->>+DB: Save {BranchIds} and Department mapping to ScreeningBatch table for {JourneyId}, {ProcessId}, {BatchId}
-    DB-->>-CLMAdaptor: Saved branch mapping
+    %% CLMAdaptor->>+DB: Save {BranchIds} and Department mapping to ScreeningBatch table for {JourneyId}, {ProcessId}, {BatchId}
+    %% DB-->>-CLMAdaptor: Saved branch mapping
     
     %% Save entities X branches to ScreeningEntity table
-    Note over CLMAdaptor: Save all entities multiplied by number of branches
-    CLMAdaptor->>+DB: Insert {allEntities} X {BranchIds} into ScreeningEntity table (e.g., (1 MainEntity + 4 RPs) X 3 branches = 15 rows) with entityId_BranchId, JourneyId, ProcessId, BatchId
-    DB-->>-CLMAdaptor: Saved screening entities (15 rows)
+    Note over CLMAdaptor: Save all entities multiplied by number of Active branches (Branches using NetReveal Screening will be marked Active in ScreeningBranchStatus table.)
+    CLMAdaptor->>+DB: Submit all Entities and Branches to Database Stored Procs. {allEntities} (Main Entity + Related Entities)
+    DB-->>DB: Get Active BranchIds from ScreeningBranchStatus table. Compare with {BranchIds} from FenX and filter only Active branches {activeBranchIds}
+    DB->>+DB: Insert {allEntities} X {activeBranchIds} into ScreeningEntity table (e.g., (1 MainEntity + 4 RPs) X 3  active branches = 15 rows) with entityId_BranchId, JourneyId, ProcessId, BatchId
+    DB-->>-CLMAdaptor: Saved screening entities (15 rows) and return inserted Entity records with ScreeningEntityId
     
     %% Call FenX SuperGraph API for all entities
     %% Note over CLMAdaptor: Get all Entities for current Journey
@@ -85,6 +87,14 @@ sequenceDiagram
       iHubIn->>+FenX: Forward Association Query for entity
       FenX-->>-iHubIn: Return Related EntityIDs 
       iHubIn-->>-CLMAdaptor: Return Related EntityIDs 
+      alt Foreach Related EntityID
+        Note over CLMAdaptor: Process each Related EntityID
+        CLMAdaptor->>+iHubIn: Call SuperGraph API with current {entityId} and get BranchIds   
+        iHubIn->>+FenX: Forward SuperGraph API request
+        FenX-->>-iHubIn: Return BranchIds
+        iHubIn-->>-CLMAdaptor: Return BranchIds          
+      end
+
       CLMAdaptor->>+DB: Save Entity Association Request / Response to RequestResponsePayload table (include OrchestrationInstanceId)
       DB-->>-CLMAdaptor: Saved
       

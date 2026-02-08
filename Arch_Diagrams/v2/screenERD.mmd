@@ -30,16 +30,20 @@ erDiagram
         Guid JourneyId
         Guid ProcessId
         Guid EntityId
+        Guid EntityDraftId
         string SMBCId
+        bool IsPrimaryEntity
         %% The ScreeningEntityID is a combination of SMBCId and OrgCode to uniquely identify an entity being screened per Org Code. Entity_id_BranchCode, e.g., 12345_001
         %% This is to support screening the same entity to be screened multiple times for different branches in the same journey/process/batch.
-        string ScreeningEntityId
-        Guid RelationshipId
+        string ScreeningEntityId      
         %%% OrchestrationInstanceId is used to correlate multiple entities screened in the same orchestration instance. The instance id is from Azure Durable Functions.
         Guid OrchestrationInstanceId
         string EntityType
+        string EntitySubType
+        string EntityCategory
         %% e.g., for a person, this could be 'IND' for individual"
         string BranchCode 
+        string Department
         %% BranchCode will be used to Derive OrgCode from a Mapping Table
         string OrgCode FK BrachCodeOrgCodeMapping OrgCode
         string EntityStatus 
@@ -51,6 +55,8 @@ erDiagram
         string ScreeningStage
         date CreatedOn
         string CreatedBy
+        date ModifiedOn
+        string ModifiedBy
     }
     
     %%% This Table is used to control which branches are used for Screening

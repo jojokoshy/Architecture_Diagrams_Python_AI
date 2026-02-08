@@ -42,3 +42,7 @@ terraform-demo/.git
 # Arch_Diagrams/diagrams/*.dot
 # Arch_Diagrams/diagrams/*.drawio
 Arch_Diagrams/v2/Outh.http
+ 
+__blobstorage__
+*_azurite*.json
+AzuriteConfig
